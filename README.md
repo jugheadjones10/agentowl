@@ -2,6 +2,8 @@
 
 By [Wasu Top Piriyakulkij](https://www.cs.cornell.edu/~wp237/), [Yichao Liang](https://yichao-liang.github.io/), [Hao Tang](https://haotang1995.github.io/), [Adrian Weller](https://mlg.eng.cam.ac.uk/adrian/), [Marta Kryven](https://marta-kryven.github.io/), [Kevin Ellis](https://www.cs.cornell.edu/~ellisk/)
 
+This GitHub repo ([agentowl](https://github.com/jugheadjones10/agentowl)) is a fork of the upstream project [topwasu/poe-world](https://github.com/topwasu/poe-world).
+
 [![deploy](https://img.shields.io/badge/Project_Page%20%20-8A2BE2)](https://topwasu.github.io/poe-world) [![arXiv](https://img.shields.io/badge/arXiv-2401.02739-red.svg)](https://arxiv.org/abs/2505.10819)
 
 
@@ -11,8 +13,8 @@ We introduce a novel program synthesis approach to output world models of comple
 
 First clone this project and cd to it 
 ```
-git clone https://github.com/topwasu/poe-world.git
-cd poe-world
+git clone https://github.com/jugheadjones10/agentowl.git
+cd agentowl
 ```
 
 Create conda environment 

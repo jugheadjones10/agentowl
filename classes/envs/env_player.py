@@ -1,4 +1,5 @@
 import numpy as np
+import pygame
 import time
 import traceback
 
@@ -30,7 +31,8 @@ class EnvPlayer():
         #     self.keys2actions = {(None, ): 0, (32, ): 1, (100, ): 2, (97, ): 3}
         # else:
         #     # Use environment's default key mapping
-        self.keys2actions = self.env.get_keys2actions()
+        self.keys2actions = self._normalize_keys2actions(
+            self.env.get_keys2actions())
 
         self.running = True
         self.actions_enum = self.env.get_actions_enum()
@@ -102,6 +104,27 @@ class EnvPlayer():
             return action
         else:
             return 0  # Default action if key combination is not mapped
+
+    def _normalize_keys2actions(self, keys2actions):
+        """
+        OC_Atari may return key names like ('w',) while pygame events use
+        integer key codes. Normalize the mapping so event.key comparisons work.
+        """
+        normalized = {}
+        for keys, action in keys2actions.items():
+            normalized_keys = []
+            for key in keys:
+                if isinstance(key, str):
+                    if key == ' ':
+                        normalized_keys.append(pygame.K_SPACE)
+                    elif len(key) == 1:
+                        normalized_keys.append(ord(key))
+                    else:
+                        normalized_keys.append(pygame.key.key_code(key))
+                else:
+                    normalized_keys.append(key)
+            normalized[tuple(sorted(normalized_keys))] = action
+        return normalized
 
     def _handle_user_input(self):
         """

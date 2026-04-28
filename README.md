@@ -11,67 +11,59 @@ We introduce a novel program synthesis approach to output world models of comple
 
 ## Installation
 
-First clone this project and cd to it 
+Dependencies are managed with [uv](https://docs.astral.sh/uv/) (`pyproject.toml` + `uv.lock`). Python **3.10** is pinned via `.python-version`.
+
+Install uv (if needed): see [Installing uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+Clone and enter the repo:
 ```
 git clone https://github.com/jugheadjones10/agentowl.git
 cd agentowl
 ```
 
-Create conda environment 
-```
-conda create -n poeworld python=3.10
-conda activate poeworld
-```
-
-Install requirements 
-```
-pip install -r requirements.txt
-```
-
-Initialize all submodules 
+Initialize submodules (required before install—local packages `openai-hf-interface` and `OC_Atari` are linked from `pyproject.toml`):
 ```
 git submodule update --init --recursive
 ```
 
-Install the submodule `openai-hf-interface` by calling 
+Create the virtualenv and install all runtime dependencies (including editable `openai-hf-interface` and `ocatari`, and Atari-enabled `gymnasium`):
 ```
-cd openai-hf-interface
-pip install -e .
-# Important: you also need to create a file (secrets.json) containing your OpenAI's API key here -- see instruction below
-cd ..
+uv sync
 ```
-`openai-hf-interface` is a package that provides nice abstractions for calling OpenAI's api, so you need to input your OpenAI's API key. To do that, create a file called `secrets.json` inside `openai-hf-interface` directory and set the key called `openai_api_key` to your OpenAI's API key value. See [the package's repo](https://github.com/topwasu/openai-hf-interface) for more information.
 
-Install the submodule OCAtari
+Optional dev tools (formatters, coverage, etc.):
 ```
-cd OC_Atari
-python setup.py develop 
-pip install "gymnasium[atari, accept-rom-license]"
-cd ..
+uv sync --group dev
 ```
+
+Julia is still required on your machine for `juliacall` / `juliapkg` (same as upstream).
+
+**OpenAI API key:** create `openai-hf-interface/secrets.json` with `"openai_api_key": "<your key>"`. See [openai-hf-interface](https://github.com/topwasu/openai-hf-interface) for details.
 
 ## Running
 
+Use `uv run` so commands use the project environment (or activate `.venv` and call `python` as usual).
+
 Running PoE-World
 ```
-python make_observations.py task=Pong # choose task from [Pong, PongAlt, MontezumaRevenge, MontezumaRevengeAlt]
-python run.py --config-name=pong_agent # choose config-name from [pong_agent, pong_alt_agent, montezuma_agent, montezuma_alt_agent]
+uv run python make_observations.py task=Pong # choose task from [Pong, PongAlt, MontezumaRevenge, MontezumaRevengeAlt]
+uv run python run.py --config-name=pong_agent # choose config-name from [pong_agent, pong_alt_agent, montezuma_agent, montezuma_alt_agent]
 ```
 
 Running WorldCoder
 ```
-python make_observations.py task=Pong # choose task from [Pong, PongAlt, MontezumaRevenge, MontezumaRevengeAlt]
-python run.py --config-name=pong_agent # choose config-name from [pong_agent, pong_alt_agent, montezuma_agent, montezuma_alt_agent]
+uv run python make_observations.py task=Pong # choose task from [Pong, PongAlt, MontezumaRevenge, MontezumaRevengeAlt]
+uv run python run.py --config-name=pong_agent # choose config-name from [pong_agent, pong_alt_agent, montezuma_agent, montezuma_alt_agent]
 ```
 
 Running ReAct
 ```
-python run_react.py task=Pong # choose task from [Pong, PongAlt, MontezumaRevenge, MontezumaRevengeAlt]
+uv run python run_react.py task=Pong # choose task from [Pong, PongAlt, MontezumaRevenge, MontezumaRevengeAlt]
 ```
 
 Running PPO
 ```
-python run_rl.py task=Pong # choose task from [Pong, PongAlt, MontezumaRevenge, MontezumaRevengeAlt]
+uv run python run_rl.py task=Pong # choose task from [Pong, PongAlt, MontezumaRevenge, MontezumaRevengeAlt]
 ```
 
 ## Example learned PoE-World world models

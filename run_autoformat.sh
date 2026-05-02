@@ -1,12 +1,5 @@
 #!/bin/bash
-yapf -i -r --style .style.yapf .
+set -euo pipefail
 
-# docformatter -i -r . \
-# --exclude CausalDiscovery.jl \
-# --exclude OC_Atari \
-# --exclude openai-hf-interface
-
-# isort . \
-# --skip '**/CausalDiscovery.jl' \
-# --skip '**/OC_Atari' \
-# --skip '**/openai-hf'
+uv run ruff check --fix .
+uv run ruff format .

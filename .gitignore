@@ -6,7 +6,8 @@
 *.npy
 *.gif
 
-.vscode/
+.vscode/*
+!.vscode/settings.json
 **.DS_Store**
 
 baseline_checkpoints/

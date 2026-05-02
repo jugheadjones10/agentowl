@@ -1,36 +1,38 @@
 #!/usr/bin/env python
-# coding=utf-8
 
-import os
-import json
 import copy
-import tiktoken
+import json
+import os
 import pickle
 
+import tiktoken
+
 from .eval_code import eval_code
+
 
 def extract_code_blocks(message):
     code_blocks = []
     in_code_block = False
-    for line in message.split("\n"):
-        if line.startswith("```"):
+    for line in message.split('\n'):
+        if line.startswith('```'):
             if in_code_block:
                 in_code_block = False
-                code_blocks[-1] = "\n".join(code_blocks[-1])
+                code_blocks[-1] = '\n'.join(code_blocks[-1])
             else:
                 in_code_block = True
                 code_blocks.append([])
         elif in_code_block:
             code_blocks[-1].append(line)
     if in_code_block:
-        code_blocks[-1] = "\n".join(code_blocks[-1])
+        code_blocks[-1] = '\n'.join(code_blocks[-1])
     return code_blocks
+
 
 def _eq(a, b):
     try:
         if type(a) != type(b):
             return False
-        if 'all' in dir(a==b):
+        if 'all' in dir(a == b):
             return (a == b).all()
         return a == b
     except Exception as e:
@@ -40,40 +42,63 @@ def _eq(a, b):
         if type(a) != type(b):
             return False
         return all([a_ == b_ for a_, b_ in zip(a, b)])
+
+
 def remove_duplicate_code(code):
     exec_globals = {}
-    exec_globals = eval_code(code, exec_globals=exec_globals, return_exec_globals=True)
+    exec_globals = eval_code(
+        code, exec_globals=exec_globals, return_exec_globals=True
+    )
     if not isinstance(exec_globals, dict):
         return code
-    code = '\n'.join([l for l in code.split('\n') if l.strip() or l.startswith('#')])
+    code = '\n'.join(
+        [l for l in code.split('\n') if l.strip() or l.startswith('#')]
+    )
 
     lines = code.split('\n')
     code_blocks = []
     prv_index = 0
     prv_exec_globals = dict()
     for index in range(len(lines)):
-        if index < len(lines)-1 and len(lines[index+1].lstrip()) != len(lines[index+1]):
+        if index < len(lines) - 1 and len(lines[index + 1].lstrip()) != len(
+            lines[index + 1]
+        ):
             continue
-        if index < len(lines)-1 and lines[index].startswith('#'):
+        if index < len(lines) - 1 and lines[index].startswith('#'):
             continue
-        if index < len(lines)-1 and (lines[index+1].startswith('else:') or lines[index+1].startswith('elif ')):
+        if index < len(lines) - 1 and (
+            lines[index + 1].startswith('else:')
+            or lines[index + 1].startswith('elif ')
+        ):
             continue
         try:
             _local_exec_globals = copy.deepcopy(prv_exec_globals)
-        except Exception as e:
+        except Exception:
             # print(e)
             # print(prv_exec_globals)
             # print(lines[:index])
             _local_exec_globals = None
         if _local_exec_globals is not None:
-            exec_globals = eval_code('\n'.join(lines[:index+1]), exec_globals=copy.deepcopy(prv_exec_globals), return_exec_globals=True)
+            exec_globals = eval_code(
+                '\n'.join(lines[: index + 1]),
+                exec_globals=copy.deepcopy(prv_exec_globals),
+                return_exec_globals=True,
+            )
         else:
-            exec_globals = eval_code('\n'.join(lines[:index+1]), exec_globals=dict(), return_exec_globals=True)
+            exec_globals = eval_code(
+                '\n'.join(lines[: index + 1]),
+                exec_globals=dict(),
+                return_exec_globals=True,
+            )
         if not isinstance(exec_globals, dict):
             # assert index != len(lines)-1, (f'index == len(lines)-1, {index} == {len(lines)-1}', code)
             continue
         exec_globals = {k: v for k, v in prv_exec_globals.items()}
-        exec_globals = eval_code('\n'.join(lines[prv_index:index+1]), exec_globals=exec_globals, return_exec_globals=True)
+        exec_globals = eval_code(
+            '\n'.join(lines[prv_index : index + 1]),
+            exec_globals=exec_globals,
+            return_exec_globals=True,
+        )
         if not isinstance(exec_globals, dict):
             # assert index != len(lines)-1, (f'index == len(lines)-1, {index} == {len(lines)-1}', code, '\n'.join(lines[prv_index:index+1]))
             continue
@@ -81,12 +106,20 @@ def remove_duplicate_code(code):
         for k in exec_globals:
             try:
                 bool(
-                    not k.startswith('__') and
-                    (not isinstance(k, str) or not _eq(k, 'evaluate')) and
-                    isinstance(k, str) and
+                    not k.startswith('__')
+                    and (not isinstance(k, str) or not _eq(k, 'evaluate'))
+                    and isinstance(k, str)
+                    and
                     # callable(exec_globals[k]) and
                     # (k not in [kk for kk in prv_exec_globals if isinstance(kk, str)] or not _eq(exec_globals[k], prv_exec_globals[k]))
-                    (all(not _eq(k, kk) for kk in prv_exec_globals if isinstance(kk, str)) or not _eq(exec_globals[k], prv_exec_globals[k]))
+                    (
+                        all(
+                            not _eq(k, kk)
+                            for kk in prv_exec_globals
+                            if isinstance(kk, str)
+                        )
+                        or not _eq(exec_globals[k], prv_exec_globals[k])
+                    )
                 )
             except Exception as e:
                 print(k)
@@ -96,22 +129,32 @@ def remove_duplicate_code(code):
             k
             for k in exec_globals
             if (
-                not k.startswith('__') and
-                (not isinstance(k, str) or not _eq(k, 'evaluate')) and
-                isinstance(k, str) and
+                not k.startswith('__')
+                and (not isinstance(k, str) or not _eq(k, 'evaluate'))
+                and isinstance(k, str)
+                and
                 # callable(exec_globals[k]) and
                 # (k not in [kk for kk in prv_exec_globals if isinstance(kk, str)] or not _eq(exec_globals[k], prv_exec_globals[k]))
-                (all(not _eq(k, kk) for kk in prv_exec_globals if isinstance(kk, str)) or not _eq(exec_globals[k], prv_exec_globals[k]))
+                (
+                    all(
+                        not _eq(k, kk)
+                        for kk in prv_exec_globals
+                        if isinstance(kk, str)
+                    )
+                    or not _eq(exec_globals[k], prv_exec_globals[k])
+                )
             )
         ]
         # assert len(update_vars) <= 1, (f'len(update_vars) != 1, {len(update_vars)} != 1', update_vars, code)
         if len(update_vars) == 0:
             prv_index = index + 1
             continue
-        code_blocks.append((
-            update_vars,
-            '\n'.join(lines[prv_index:index+1]),
-        ))
+        code_blocks.append(
+            (
+                update_vars,
+                '\n'.join(lines[prv_index : index + 1]),
+            )
+        )
         prv_index = index + 1
         prv_exec_globals = exec_globals
     # assert prv_index == len(lines), (f'prv_index != len(lines), {prv_index} != {len(lines)}', code)
@@ -126,73 +169,130 @@ def remove_duplicate_code(code):
     deduplicated_code_blocks = deduplicated_code_blocks[::-1]
 
     return '\n'.join(deduplicated_code_blocks)
+
+
 def remove_unused_code(code, entry_point):
     code = remove_duplicate_code(code)
     exec_globals = {}
-    exec_globals = eval_code(code, exec_globals=exec_globals, return_exec_globals=True)
+    exec_globals = eval_code(
+        code, exec_globals=exec_globals, return_exec_globals=True
+    )
     if not isinstance(exec_globals, dict):
         return code
-    code = '\n'.join([l for l in code.split('\n') if l.strip() or l.startswith('#')])
+    code = '\n'.join(
+        [l for l in code.split('\n') if l.strip() or l.startswith('#')]
+    )
 
     lines = code.split('\n')
     code_blocks = {}
     prv_index = 0
     prv_exec_globals = dict()
     for index in range(len(lines)):
-        if index < len(lines)-1 and len(lines[index+1].lstrip()) != len(lines[index+1]):
+        if index < len(lines) - 1 and len(lines[index + 1].lstrip()) != len(
+            lines[index + 1]
+        ):
             continue
-        if index < len(lines)-1 and lines[index].startswith('#'):
+        if index < len(lines) - 1 and lines[index].startswith('#'):
             continue
-        if index < len(lines)-1 and (lines[index+1].startswith('else:') or lines[index+1].startswith('elif ')):
+        if index < len(lines) - 1 and (
+            lines[index + 1].startswith('else:')
+            or lines[index + 1].startswith('elif ')
+        ):
             continue
         try:
             _local_exec_globals = copy.deepcopy(prv_exec_globals)
-        except Exception as e:
+        except Exception:
             _local_exec_globals = None
         if _local_exec_globals is not None:
-            exec_globals = eval_code('\n'.join(lines[:index+1]), exec_globals=copy.deepcopy(prv_exec_globals), return_exec_globals=True)
+            exec_globals = eval_code(
+                '\n'.join(lines[: index + 1]),
+                exec_globals=copy.deepcopy(prv_exec_globals),
+                return_exec_globals=True,
+            )
         else:
-            exec_globals = eval_code('\n'.join(lines[:index+1]), exec_globals=dict(), return_exec_globals=True)
+            exec_globals = eval_code(
+                '\n'.join(lines[: index + 1]),
+                exec_globals=dict(),
+                return_exec_globals=True,
+            )
         if not isinstance(exec_globals, dict):
-            assert index != len(lines)-1, (f'index == len(lines)-1, {index} == {len(lines)-1}', code)
+            assert index != len(lines) - 1, (
+                f'index == len(lines)-1, {index} == {len(lines) - 1}',
+                code,
+            )
             continue
         exec_globals = {k: v for k, v in prv_exec_globals.items()}
-        exec_globals = eval_code('\n'.join(lines[prv_index:index+1]), exec_globals=exec_globals, return_exec_globals=True)
+        exec_globals = eval_code(
+            '\n'.join(lines[prv_index : index + 1]),
+            exec_globals=exec_globals,
+            return_exec_globals=True,
+        )
         if not isinstance(exec_globals, dict):
             continue
         update_vars = [
             k
             for k in exec_globals
             if (
-                not k.startswith('__') and
-                k != 'evaluate' and
-                isinstance(k, str) and
+                not k.startswith('__')
+                and k != 'evaluate'
+                and isinstance(k, str)
+                and
                 # callable(exec_globals[k]) and
-                (k not in [kk for kk in prv_exec_globals if isinstance(kk, str)] or not _eq(exec_globals[k], prv_exec_globals[k]))
+                (
+                    k
+                    not in [
+                        kk for kk in prv_exec_globals if isinstance(kk, str)
+                    ]
+                    or not _eq(exec_globals[k], prv_exec_globals[k])
+                )
             )
         ]
         if len(update_vars) == 0:
             prv_index = index + 1
             continue
-        assert tuple(sorted(set(update_vars))) not in code_blocks, (f'set(update_vars) in code_blocks, {set(update_vars)} in {code_blocks}', code)
-        code_blocks[tuple(sorted(set(update_vars)))] = '\n'.join(lines[prv_index:index+1])
+        assert tuple(sorted(set(update_vars))) not in code_blocks, (
+            f'set(update_vars) in code_blocks, {set(update_vars)} in {code_blocks}',
+            code,
+        )
+        code_blocks[tuple(sorted(set(update_vars)))] = '\n'.join(
+            lines[prv_index : index + 1]
+        )
         prv_index = index + 1
         prv_exec_globals = exec_globals
 
-    assert entry_point in prv_exec_globals, (f'entry_point not in prv_exec_globals, {entry_point} not in {prv_exec_globals}', code)
+    assert entry_point in prv_exec_globals, (
+        f'entry_point not in prv_exec_globals, {entry_point} not in {prv_exec_globals}',
+        code,
+    )
     useful_vars = set([entry_point])
     while True:
-        useful_code = '\n'.join([code for var_list, code in code_blocks.items() if set(var_list).intersection(useful_vars)])
+        useful_code = '\n'.join(
+            [
+                code
+                for var_list, code in code_blocks.items()
+                if set(var_list).intersection(useful_vars)
+            ]
+        )
         cur_useful_vars = useful_vars.copy()
         for var_list, code in code_blocks.items():
-            if set(var_list).intersection(cur_useful_vars) or any([v in useful_code for v in var_list]):
+            if set(var_list).intersection(cur_useful_vars) or any(
+                [v in useful_code for v in var_list]
+            ):
                 cur_useful_vars.update(var_list)
         if useful_vars == cur_useful_vars:
             break
         useful_vars = cur_useful_vars
-    useful_code = '\n'.join([code for var_list, code in code_blocks.items() if code.strip().startswith('class ') or set(var_list).intersection(useful_vars)])
+    useful_code = '\n'.join(
+        [
+            code
+            for var_list, code in code_blocks.items()
+            if code.strip().startswith('class ')
+            or set(var_list).intersection(useful_vars)
+        ]
+    )
 
     return useful_code
+
 
 def abbr_repr(obj, max_len=100):
     if isinstance(obj, dict):
@@ -224,34 +324,53 @@ def abbr_repr(obj, max_len=100):
     else:
         return obj
 
+
 def count_tokens_for_openai(mess, model='gpt-4'):
     enc = tiktoken.encoding_for_model(model)
     return len(enc.encode(mess))
+
 
 def remove_noncompilable_code_blocks(code_blocks, prefix=''):
     idx = 0
     code_blocks = copy.deepcopy(code_blocks)
     while idx < len(code_blocks):
-        code = '\n'.join(code_blocks[:idx+1])
-        exec_globals = eval_code(prefix+'\n'+code, exec_globals=dict(), return_exec_globals=True)
+        code = '\n'.join(code_blocks[: idx + 1])
+        exec_globals = eval_code(
+            prefix + '\n' + code, exec_globals=dict(), return_exec_globals=True
+        )
         if not isinstance(exec_globals, dict):
-            exec_globals = eval_code(code, exec_globals=dict(), return_exec_globals=True)
+            exec_globals = eval_code(
+                code, exec_globals=dict(), return_exec_globals=True
+            )
         if not isinstance(exec_globals, dict):
-            code_blocks = code_blocks[:idx] + code_blocks[idx+1:]
+            code_blocks = code_blocks[:idx] + code_blocks[idx + 1 :]
         else:
             idx += 1
     return code_blocks
 
-def get_avoid_words(key_words=['same', 'rest', 'remain', 'unchange', 'omit', '...', 'class',],):
+
+def get_avoid_words(
+    key_words=[
+        'same',
+        'rest',
+        'remain',
+        'unchange',
+        'omit',
+        '...',
+        'class',
+    ],
+):
     curdir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(curdir, 'avoid_words.json'), 'r') as f:
+    with open(os.path.join(curdir, 'avoid_words.json')) as f:
         avoid_words = json.load(f)
     avoid_words = {
-        k:-100
+        k: -100
         for k, v in avoid_words.items()
-        if key_words is None or any([w.lower() in v.lower() for w in key_words])
+        if key_words is None
+        or any([w.lower() in v.lower() for w in key_words])
     }
     return avoid_words
+
 
 def pickable(data):
     try:
@@ -260,25 +379,13 @@ def pickable(data):
     except:
         pass
     if isinstance(data, dict):
-        return {
-            k: pickable(v)
-            for k, v in data.items()
-        }
+        return {k: pickable(v) for k, v in data.items()}
     elif isinstance(data, list):
-        return [
-            pickable(v)
-            for v in data
-        ]
+        return [pickable(v) for v in data]
     elif isinstance(data, tuple):
-        return tuple(
-            pickable(v)
-            for v in data
-        )
+        return tuple(pickable(v) for v in data)
     elif isinstance(data, set):
-        return {
-            pickable(v)
-            for v in data
-        }
+        return {pickable(v) for v in data}
     elif isinstance(data, str):
         return data
     elif isinstance(data, int):
@@ -291,6 +398,7 @@ def pickable(data):
         return data
     else:
         return str(data)
+
 
 def itemnum(data):
     if isinstance(data, dict):

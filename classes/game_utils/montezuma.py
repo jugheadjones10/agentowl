@@ -23,7 +23,7 @@ montezuma_revenge_wh_dict = {
     'ladder': (8, 4),
     'conveyer_belt': (8, 4),
     'wall': (8, 4),
-    'disappearing_platform': (8, 4)
+    'disappearing_platform': (8, 4),
 }
 
 MONTEZUMA_REVENGE_MAX_ABS_VELOCITY = 15
@@ -32,7 +32,16 @@ MONTEZUMA_REVENGE_HISTORY_LENGTH = 100
 
 MONTEZUMA_REVENGE_MAX_ABS_SIZE_CHANGE = 1
 
-MONTEZUMA_REVENGE_ACTIONS = ['NOOP', 'UP', 'DOWN', 'RIGHT', 'LEFT', 'FIRE', 'LEFTFIRE', 'RIGHTFIRE']
+MONTEZUMA_REVENGE_ACTIONS = [
+    'NOOP',
+    'UP',
+    'DOWN',
+    'RIGHT',
+    'LEFT',
+    'FIRE',
+    'LEFTFIRE',
+    'RIGHTFIRE',
+]
 
 
 class MontezumaRevengeActions(BaseActions):
@@ -57,8 +66,22 @@ class MontezumaRevengeActions(BaseActions):
 
     def get_all_possible_actions():
         return [
-            'NOOP', 'FIRE', 'UP', 'RIGHT', 'LEFT', 'DOWN', 'UPRIGHT', 'UPLEFT',
-            'DOWNRIGHT', 'DOWNLEFT', 'UPFIRE', 'RIGHTFIRE', 'LEFTFIRE',
-            'DOWNFIRE', 'UPRIGHTFIRE', 'UPLEFTFIRE', 'DOWNRIGHTFIRE',
-            'DOWNLEFTFIRE'
+            'NOOP',
+            'FIRE',
+            'UP',
+            'RIGHT',
+            'LEFT',
+            'DOWN',
+            'UPRIGHT',
+            'UPLEFT',
+            'DOWNRIGHT',
+            'DOWNLEFT',
+            'UPFIRE',
+            'RIGHTFIRE',
+            'LEFTFIRE',
+            'DOWNFIRE',
+            'UPRIGHTFIRE',
+            'UPLEFTFIRE',
+            'DOWNRIGHTFIRE',
+            'DOWNLEFTFIRE',
         ]

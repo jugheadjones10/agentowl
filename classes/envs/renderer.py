@@ -1,13 +1,12 @@
-import pygame
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import numpy as np
-from typing import Tuple, Optional, List, Any, Union
 from abc import ABC, abstractmethod
+from typing import Any
 
-from classes.helper import *
+import numpy as np
+import pygame
+from ocatari.utils import draw_arrow, draw_label
+
 from classes.envs import create_atari_env
-from ocatari.utils import draw_label, draw_arrow
+from classes.helper import *
 
 UPSCALE_FACTOR = 4
 
@@ -28,11 +27,12 @@ class BaseRenderer(ABC):
     """
     Base class for game renderers that all games should inherit from.
     """
+
     @abstractmethod
     def render(self, obj_list):
         """
         Visualize the given ObjList `obj_list`.
-        
+
         Return either None or a 2d array representing the rendered image.
         """
         pass
@@ -47,9 +47,10 @@ class BoxRenderer(BaseRenderer):
 
     def _initialize_rendering(self):
         pygame.init()
-        self.window_size = (self.image_size[0] * UPSCALE_FACTOR,
-                            self.image_size[1] * UPSCALE_FACTOR
-                            )  # render with higher res
+        self.window_size = (
+            self.image_size[0] * UPSCALE_FACTOR,
+            self.image_size[1] * UPSCALE_FACTOR,
+        )  # render with higher res
         self.label_font = pygame.font.SysFont('Pixel12x10', 16)
         if self.ret_image:
             self.window = pygame.Surface(self.window_size)
@@ -98,29 +99,37 @@ class BoxRenderer(BaseRenderer):
             y_c = y + h // 2
 
             # Draw an 'X' at object center
-            pygame.draw.line(overlay_surface,
-                             color=(255, 255, 255),
-                             width=2,
-                             start_pos=(x_c - 4, y_c - 4),
-                             end_pos=(x_c + 4, y_c + 4))
-            pygame.draw.line(overlay_surface,
-                             color=(255, 255, 255),
-                             width=2,
-                             start_pos=(x_c - 4, y_c + 4),
-                             end_pos=(x_c + 4, y_c - 4))
+            pygame.draw.line(
+                overlay_surface,
+                color=(255, 255, 255),
+                width=2,
+                start_pos=(x_c - 4, y_c - 4),
+                end_pos=(x_c + 4, y_c + 4),
+            )
+            pygame.draw.line(
+                overlay_surface,
+                color=(255, 255, 255),
+                width=2,
+                start_pos=(x_c - 4, y_c + 4),
+                end_pos=(x_c + 4, y_c - 4),
+            )
 
             # Draw bounding box
-            pygame.draw.rect(overlay_surface,
-                             color=(255, 255, 255),
-                             rect=(x, y, w, h),
-                             width=2)
+            pygame.draw.rect(
+                overlay_surface,
+                color=(255, 255, 255),
+                rect=(x, y, w, h),
+                width=2,
+            )
 
             # Draw object category label (optional with value)
             label = obj.obj_type
-            draw_label(self.window,
-                       label,
-                       position=(x, y + h + 4),
-                       font=self.label_font)
+            draw_label(
+                self.window,
+                label,
+                position=(x, y + h + 4),
+                font=self.label_font,
+            )
 
             # Draw object orientation
             # if game_object.orientation is not None:
@@ -128,11 +137,13 @@ class BoxRenderer(BaseRenderer):
 
             # Draw velocity vector
             if dx != 0 or dy != 0:
-                draw_arrow(overlay_surface,
-                           start_pos=(float(x_c), float(y_c)),
-                           end_pos=(x_c + 2 * dx, y_c + 2 * dy),
-                           color=(100, 200, 255),
-                           width=2)
+                draw_arrow(
+                    overlay_surface,
+                    start_pos=(float(x_c), float(y_c)),
+                    end_pos=(x_c + 2 * dx, y_c + 2 * dy),
+                    color=(100, 200, 255),
+                    width=2,
+                )
 
         self.window.blit(overlay_surface, (0, 0))
 
@@ -144,10 +155,11 @@ class BoxRenderer(BaseRenderer):
         else:
             frameskip = 1
             self.clock.tick(
-                60 // frameskip)  # limit FPS to avoid super fast movement
+                60 // frameskip
+            )  # limit FPS to avoid super fast movement
             pygame.display.flip()
             pygame.event.pump()
-            
+
 
 class MontezumaFirstRoomRender(BaseRenderer):
     def __init__(self, config, ret_image=False):
@@ -157,7 +169,7 @@ class MontezumaFirstRoomRender(BaseRenderer):
         self.arr = self.atari_env.env.get_ram()
         self.ret_image = ret_image
 
-    def render(self, obj_list: ObjList) -> Optional[Any]:
+    def render(self, obj_list: ObjList) -> Any | None:
         """
         Renders the current state of the imagined environment.
 
@@ -211,24 +223,24 @@ class ColoredBoxRenderer(BoxRenderer):
         # Define a color mapping for different object categories
         if config.task.startswith('Montezuma'):
             self.color_map = {
-                'player': (255, 0, 0),       # Red
+                'player': (255, 0, 0),  # Red
                 'skull': (255, 255, 255),  # White
-                'ladder': (101, 67, 33),      # Dark Brown
-                'key': (255, 255, 0),    # Yellow
-                'platform': (128, 128, 128),# Gray
-                'zone': (255, 165, 0),      # Orange
-                'wall': (0, 100, 0),         # Dark Green
-                'ball': (0, 0, 255),      # Blue
-                'default': (255, 255, 255)  # White
+                'ladder': (101, 67, 33),  # Dark Brown
+                'key': (255, 255, 0),  # Yellow
+                'platform': (128, 128, 128),  # Gray
+                'zone': (255, 165, 0),  # Orange
+                'wall': (0, 100, 0),  # Dark Green
+                'ball': (0, 0, 255),  # Blue
+                'default': (255, 255, 255),  # White
             }
         else:
             self.color_map = {
-                'player': (144, 238, 144),    # Light Green
-                'ball': (255, 255, 255),          # White
-                'enemy': (255, 165, 0),        # Orange
-                'wall': (128, 128, 128),          # dark gray
-                'zone': (128, 128, 128),          # dark gray
-                'default': (139, 69, 19),          # BRown
+                'player': (144, 238, 144),  # Light Green
+                'ball': (255, 255, 255),  # White
+                'enemy': (255, 165, 0),  # Orange
+                'wall': (128, 128, 128),  # dark gray
+                'zone': (128, 128, 128),  # dark gray
+                'default': (139, 69, 19),  # BRown
             }
 
     def render(self, obj_list):
@@ -282,61 +294,73 @@ class ColoredBoxRenderer(BoxRenderer):
             y_c = y + h // 2
 
             # Get color based on object category
-            color = self.color_map.get(obj.obj_type.lower(), self.color_map['default'])
+            color = self.color_map.get(
+                obj.obj_type.lower(), self.color_map['default']
+            )
 
             # Special rendering for ladders
             if obj.obj_type.lower() == 'ladder':
                 # Draw the main ladder rectangle
-                pygame.draw.rect(overlay_surface,
-                               color=color,
-                               rect=(x, y, w, h))
-                
+                pygame.draw.rect(
+                    overlay_surface, color=color, rect=(x, y, w, h)
+                )
+
                 # Draw horizontal stripes
                 stripe_height = 4  # Height of each stripe
                 stripe_spacing = 8  # Space between stripes
                 stripe_color = (0, 0, 0)  # Black stripes
-                
+
                 # Calculate number of stripes based on height
                 num_stripes = int(h / (stripe_height + stripe_spacing))
-                
+
                 # Draw stripes
                 for i in range(num_stripes):
                     stripe_y = y + i * (stripe_height + stripe_spacing)
-                    pygame.draw.rect(overlay_surface,
-                                   color=stripe_color,
-                                   rect=(x, stripe_y, w, stripe_height))
+                    pygame.draw.rect(
+                        overlay_surface,
+                        color=stripe_color,
+                        rect=(x, stripe_y, w, stripe_height),
+                    )
             else:
                 # Draw filled box with the category color for non-ladder objects
-                pygame.draw.rect(overlay_surface,
-                               color=color,
-                               rect=(x, y, w, h))
+                pygame.draw.rect(
+                    overlay_surface, color=color, rect=(x, y, w, h)
+                )
 
             # Draw an 'X' at object center
-            pygame.draw.line(overlay_surface,
-                           color=(255, 255, 255),
-                           width=2,
-                           start_pos=(x_c - 4, y_c - 4),
-                           end_pos=(x_c + 4, y_c + 4))
-            pygame.draw.line(overlay_surface,
-                           color=(255, 255, 255),
-                           width=2,
-                           start_pos=(x_c - 4, y_c + 4),
-                           end_pos=(x_c + 4, y_c - 4))
+            pygame.draw.line(
+                overlay_surface,
+                color=(255, 255, 255),
+                width=2,
+                start_pos=(x_c - 4, y_c - 4),
+                end_pos=(x_c + 4, y_c + 4),
+            )
+            pygame.draw.line(
+                overlay_surface,
+                color=(255, 255, 255),
+                width=2,
+                start_pos=(x_c - 4, y_c + 4),
+                end_pos=(x_c + 4, y_c - 4),
+            )
 
             # Draw object category label
             label = obj.obj_type
-            draw_label(self.window,
-                      label,
-                      position=(x, y + h + 4),
-                      font=self.label_font)
+            draw_label(
+                self.window,
+                label,
+                position=(x, y + h + 4),
+                font=self.label_font,
+            )
 
             # Draw velocity vector
             if dx != 0 or dy != 0:
-                draw_arrow(overlay_surface,
-                         start_pos=(float(x_c), float(y_c)),
-                         end_pos=(x_c + 2 * dx, y_c + 2 * dy),
-                         color=(100, 200, 255),
-                         width=2)
+                draw_arrow(
+                    overlay_surface,
+                    start_pos=(float(x_c), float(y_c)),
+                    end_pos=(x_c + 2 * dx, y_c + 2 * dy),
+                    color=(100, 200, 255),
+                    width=2,
+                )
 
         # Render player last (on top of everything)
         if player_obj is not None:
@@ -360,35 +384,45 @@ class ColoredBoxRenderer(BoxRenderer):
             y_c = y + h // 2
 
             # Draw player box
-            pygame.draw.rect(overlay_surface,
-                           color=self.color_map['player'],
-                           rect=(x, y, w, h))
+            pygame.draw.rect(
+                overlay_surface,
+                color=self.color_map['player'],
+                rect=(x, y, w, h),
+            )
 
             # Draw an 'X' at player center
-            pygame.draw.line(overlay_surface,
-                           color=(255, 255, 255),
-                           width=2,
-                           start_pos=(x_c - 4, y_c - 4),
-                           end_pos=(x_c + 4, y_c + 4))
-            pygame.draw.line(overlay_surface,
-                           color=(255, 255, 255),
-                           width=2,
-                           start_pos=(x_c - 4, y_c + 4),
-                           end_pos=(x_c + 4, y_c - 4))
+            pygame.draw.line(
+                overlay_surface,
+                color=(255, 255, 255),
+                width=2,
+                start_pos=(x_c - 4, y_c - 4),
+                end_pos=(x_c + 4, y_c + 4),
+            )
+            pygame.draw.line(
+                overlay_surface,
+                color=(255, 255, 255),
+                width=2,
+                start_pos=(x_c - 4, y_c + 4),
+                end_pos=(x_c + 4, y_c - 4),
+            )
 
             # Draw player label
-            draw_label(self.window,
-                      'player',
-                      position=(x, y + h + 4),
-                      font=self.label_font)
+            draw_label(
+                self.window,
+                'player',
+                position=(x, y + h + 4),
+                font=self.label_font,
+            )
 
             # Draw velocity vector
             if dx != 0 or dy != 0:
-                draw_arrow(overlay_surface,
-                         start_pos=(float(x_c), float(y_c)),
-                         end_pos=(x_c + 2 * dx, y_c + 2 * dy),
-                         color=(100, 200, 255),
-                         width=2)
+                draw_arrow(
+                    overlay_surface,
+                    start_pos=(float(x_c), float(y_c)),
+                    end_pos=(x_c + 2 * dx, y_c + 2 * dy),
+                    color=(100, 200, 255),
+                    width=2,
+                )
 
         self.window.blit(overlay_surface, (0, 0))
 
@@ -399,6 +433,8 @@ class ColoredBoxRenderer(BoxRenderer):
             return frame
         else:
             frameskip = 1
-            self.clock.tick(60 // frameskip)  # limit FPS to avoid super fast movement
+            self.clock.tick(
+                60 // frameskip
+            )  # limit FPS to avoid super fast movement
             pygame.display.flip()
             pygame.event.pump()

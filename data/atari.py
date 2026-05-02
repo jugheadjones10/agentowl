@@ -1,12 +1,12 @@
-from typing import Tuple, List
 import pickle
 
-from classes.helper import ObjList, GameState
+from classes.helper import GameState, ObjList
 
 
 def load_atari_observations(
-        identifier: str) -> Tuple[List[ObjList], List[str], List[GameState]]:
-    filename = f"saved_data/obs_{identifier}.pickle"
-    with open(filename, "rb") as f:
+    identifier: str,
+) -> tuple[list[ObjList], list[str], list[GameState]]:
+    filename = f'saved_data/obs_{identifier}.pickle'
+    with open(filename, 'rb') as f:
         observations, actions, game_states = pickle.load(f)
     return observations, actions, game_states

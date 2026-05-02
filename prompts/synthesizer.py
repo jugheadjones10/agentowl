@@ -1,5 +1,4 @@
-propose_prompt = \
-"""\
+propose_prompt = """\
 """
 
 explain_event_prompt = """\
@@ -249,9 +248,9 @@ Given this list of actions: NOOP, UP, DOWN, RIGHT, LEFT, FIRE, LEFTFIRE, RIGHTFI
 
 Some of these actions are the opposite of each other.
 For example, the opposite of LEFT is RIGHT, the opposite action of UP is DOWN, and the opposite of LEFTFIRE is RIGHTFIRE.
-Some actions do not have an opposite, such as NOOP and FIRE. 
+Some actions do not have an opposite, such as NOOP and FIRE.
 
-You will be given a python function with the following signature: 
+You will be given a python function with the following signature:
 
 def alter_{obj_type}_objects(obj_list: ObjList, action: str) -> ObjList
 
@@ -830,8 +829,7 @@ Please output the alter_{obj_type}_objects function following these rules:
 """
 
 
-interpret_prompt = \
-"""\
+interpret_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 8 possible reasons for the effects
 
 Here's an example with player objects:
@@ -865,8 +863,7 @@ Please follow these rules for your output:
 2. do not talk about IDs
 """
 
-interpret_obj_interact_prompt = \
-"""\
+interpret_obj_interact_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with player objects:
@@ -898,8 +895,7 @@ Please follow these rules for your output:
 2. do not talk about IDs
 """
 
-interpret_obj_interact_pomdp_prompt = \
-"""\
+interpret_obj_interact_pomdp_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with player objects:
@@ -931,8 +927,7 @@ Please follow these rules for your output:
 2. do not talk about IDs
 """
 
-interpret_obj_momentum_pomdp_x_prompt = \
-"""\
+interpret_obj_momentum_pomdp_x_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 1 possible reasons for the effects
 
 Here's an example with car objects:
@@ -957,11 +952,10 @@ Output list of object changes:
 Please follow these rules for your output:
 1. make sure each reason only talks about one object change
 2. do not talk about IDs
-3. If the input velocity is negative, refer to the position with "less than or equal to". If the input velocity is positive, refer to the position with "greater than or equal to". 
+3. If the input velocity is negative, refer to the position with "less than or equal to". If the input velocity is positive, refer to the position with "greater than or equal to".
 """
 
-interpret_obj_momentum_pomdp_y_prompt = \
-"""\
+interpret_obj_momentum_pomdp_y_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 1 possible reasons for the effects
 
 Here's an example with car objects:
@@ -989,8 +983,7 @@ Please follow these rules for your output:
 3. If the input velocity is negative, refer to the position with "less than or equal to". If the input velocity is positive, refer to the position with "greater than or equal to".
 """
 
-interpret_obj_velocity_pomdp_x_prompt = \
-"""\
+interpret_obj_velocity_pomdp_x_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 2 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1021,8 +1014,7 @@ Please follow these rules for your output:
 4. Only refer to the input velocities only as positive or negative values. Do not use equal, less than, or more than.
 """
 
-interpret_obj_velocity_pomdp_y_prompt = \
-"""\
+interpret_obj_velocity_pomdp_y_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 2 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1084,8 +1076,7 @@ Please follow these rules for your output:
 # 3. If width or height is positive, use "less than or equal to". Otherwise, use "greater than or equal to"
 # """
 
-interpret_obj_size_change_pomdp_prompt = \
-"""\
+interpret_obj_size_change_pomdp_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 2 possible reasons for the effects
 
 Here's an example with car objects:
@@ -1114,8 +1105,7 @@ Please follow these rules for your output:
 2. do not talk about IDs
 """
 
-interpret_obj_change_pomdp_prompt = \
-"""\
+interpret_obj_change_pomdp_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 6 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1145,8 +1135,7 @@ Please follow these rules for your output:
 2. do not talk about IDs
 """
 
-interpret_velocity_prompt = \
-"""\
+interpret_velocity_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 6 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1181,8 +1170,7 @@ Please follow these rules for your output:
 3. always mention one object that {obj_type} objects are touching like in the example. If there is no interactions, please explicitly say that the {obj_type} objects are not touching anything
 """
 
-interpret_velocity_creation_prompt = \
-"""\
+interpret_velocity_creation_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1215,8 +1203,7 @@ Please follow these rules for your output:
 3. always mention one object that {obj_type} objects are touching like in the example. If there is no interactions, please explicitly say that the {obj_type} objects are not touching anything
 """
 
-interpret_velocity_2_prompt = \
-"""\
+interpret_velocity_2_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 8 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1247,8 +1234,7 @@ Please follow these rules for your output:
 4. Do not mention velocity or object interactions in the creation reasons.
 """
 
-interpret_velocity_3_prompt = \
-"""\
+interpret_velocity_3_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 2 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1279,8 +1265,7 @@ Please follow these rules for your output:
 3. always mention one object that {obj_type} objects are touching like in the example. If there is no interactions, please explicitly say that the {obj_type} objects are not touching anything
 """
 
-interpret_velocity_4_prompt = \
-"""\
+interpret_velocity_4_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1314,8 +1299,7 @@ Please follow these rules for your output:
 4. Only refer to the input velocities only as positive, negative, or zero values. Do not use equal, less than, or more than.
 """
 
-interpret_no_int_prompt = \
-"""\
+interpret_no_int_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1345,8 +1329,7 @@ Please follow these rules for your output:
 2. do not talk about IDs
 """
 
-interpret_2_prompt = \
-"""\
+interpret_2_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1378,8 +1361,7 @@ Please follow these rules for your output:
 2. do not talk about IDs
 """
 
-interpret_3_prompt = \
-"""\
+interpret_3_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1412,8 +1394,7 @@ Please follow these rules for your output:
 2. do not talk about IDs
 """
 
-interpret_4_prompt = \
-"""\
+interpret_4_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with player objects:
@@ -1446,8 +1427,7 @@ Please follow these rules for your output:
 3. pick a "danger attribute more than" that is slightly lower than the actual danger attribute of the player object like in the example.
 """
 
-interpret_5_prompt = \
-"""\
+interpret_5_prompt = """\
 I'll give you an input list of objects and an output list of object changes, and I want you to list 4 possible reasons for the effects
 
 Here's an example with sword_hud objects:
@@ -1539,8 +1519,8 @@ def alter_{obj_type}_objects(obj_list: ObjList, action: str) -> ObjList:
     return obj_list"""
 
 danger_att_prompt = """\
-I want to know what are some important factors that could to a player's death in a video game. 
-Please list 4 non-negative integer attributes that can be used to determine the player's death based on 
+I want to know what are some important factors that could to a player's death in a video game.
+Please list 4 non-negative integer attributes that can be used to determine the player's death based on
 the player's history of velocity_x, velocity_y.
 
 For each attribute, try to pick one that relies on a single SPECIFIC value of velocity_x or velocity_y, not just a range of values.
@@ -1553,7 +1533,7 @@ class Obj:
         id (int): id of the object
         obj_type (string): type of the object
         history (dict): history of the object, containing the keys 'velocity_x', 'velocity_y'.
-        
+
 An example history of when the player dies:
 {lst_txt}
 """

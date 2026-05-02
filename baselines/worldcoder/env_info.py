@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 
 DocString = '''
 Here are some documentation explaining the API for the environment.

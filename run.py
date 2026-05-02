@@ -14,26 +14,24 @@ det_world_model=True obs_suffix=_basic9 run_world_model=False \
 moe.batch_size=10000 moe.lr=1 moe.optim=lbfgs moe.n_steps=2 \
 agent.initial_budget_iterations=4000 agent.slow_budget_increase=True
 """
-from typing import List
-import os
+
+import logging
 import random
 
 import hydra
-import dill as pickle
-import logging
 import numpy as np
 from omegaconf import DictConfig
+from openai_hf_interface import choose_provider
 
-from baselines.worldcoder import WorldCoder
-from learners.world_model_learner import PoEWorldLearner, WorldModelLearner
 from agents.agent import Agent
-from data.atari import load_atari_observations
+from baselines.worldcoder import WorldCoder
 from classes.envs import *
 from classes.envs.object_tracker import *
 from classes.envs.renderer import get_human_renderer
-from classes.helper import set_global_constants, StateTransitionTriplet
-from openai_hf_interface import choose_provider
+from classes.helper import StateTransitionTriplet, set_global_constants
+from data.atari import load_atari_observations
 from eval import evaluate_world_model
+from learners.world_model_learner import PoEWorldLearner, WorldModelLearner
 
 log = logging.getLogger('main')
 log.setLevel(logging.INFO)
@@ -43,15 +41,15 @@ def set_seed(seed):
     """Set random seeds for reproducibility."""
     np.random.seed(seed)
     random.seed(seed)
-    
-    
+
+
 def get_world_model_learner(config: DictConfig) -> WorldModelLearner:
     """
     Choose the world model learner based on the configuration.
-    
+
     Args:
         config: Hydra configuration object containing all parameters
-    
+
     Returns:
         WorldModelLearner: The world model learner object
     """
@@ -63,7 +61,7 @@ def get_world_model_learner(config: DictConfig) -> WorldModelLearner:
         raise NotImplementedError
 
 
-@hydra.main(version_base=None, config_path="conf", config_name="config")
+@hydra.main(version_base=None, config_path='conf', config_name='config')
 def main(config: DictConfig):
     """
     Main execution function that:
@@ -71,7 +69,7 @@ def main(config: DictConfig):
     2. Either loads or synthesizes a world model
     3. Runs interactive simulation or trains an agent
     4. Evaluates model performance
-    
+
     Args:
         config: Hydra configuration object containing all parameters
     """
@@ -86,31 +84,39 @@ def main(config: DictConfig):
 
     # Initialize game-specific constants
     set_global_constants(config.task)
-    
+
     if config.database_path is None:
         config.database_path = f'completions_atari_{config.task.lower()}{"" if config.seed == 0 else f"_s{config.seed}"}.db'
 
     # --- Synthesize world model ---
     # Load observations -- use the same observation for both non-prime and prime versions
     observations, actions, game_states = load_atari_observations(
-        config.task.replace('Alt', '') + config.obs_suffix)
+        config.task.replace('Alt', '') + config.obs_suffix
+    )
 
     # Optional: Use subset of observations
     if config.obs_index != -1:
-        observations = observations[config.obs_index:config.obs_index +
-                                    config.obs_index_length + 1]
-        actions = actions[config.obs_index:config.obs_index +
-                            config.obs_index_length]
-        game_states = game_states[config.obs_index:config.obs_index +
-                                    config.obs_index_length + 1]
-        
+        observations = observations[
+            config.obs_index : config.obs_index + config.obs_index_length + 1
+        ]
+        actions = actions[
+            config.obs_index : config.obs_index + config.obs_index_length
+        ]
+        game_states = game_states[
+            config.obs_index : config.obs_index + config.obs_index_length + 1
+        ]
+
     transitions = []
     for i in range(len(actions)):
-        transitions.append(StateTransitionTriplet(observations[i],
-                                                    actions[i],
-                                                    observations[i + 1],
-                                                    input_game_state=game_states[i],
-                                                    output_game_state=game_states[i + 1]))
+        transitions.append(
+            StateTransitionTriplet(
+                observations[i],
+                actions[i],
+                observations[i + 1],
+                input_game_state=game_states[i],
+                output_game_state=game_states[i + 1],
+            )
+        )
 
     learner = get_world_model_learner(config)
     world_model = learner.synthesize_world_model(transitions)
@@ -120,8 +126,9 @@ def main(config: DictConfig):
     if config.post_synthesis_mode == 'run':
         object_tracker = ObjectTracker()
         renderer = get_human_renderer(config)
-        imagine_env = ImaginedAtariEnv(config, world_model, object_tracker,
-                                       renderer)
+        imagine_env = ImaginedAtariEnv(
+            config, world_model, object_tracker, renderer
+        )
         env_player = EnvPlayer(imagine_env)
         env_player.run()
     elif config.post_synthesis_mode == 'agent':
@@ -130,7 +137,7 @@ def main(config: DictConfig):
     elif config.post_synthesis_mode == 'evaluate':
         evaluate_world_model(config, world_model)
     elif config.post_synthesis_mode == 'nothing':
-        log.info("Not doing anything post-synthesis")
+        log.info('Not doing anything post-synthesis')
     else:
         raise NotImplementedError
 

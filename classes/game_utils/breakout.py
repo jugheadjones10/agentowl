@@ -6,7 +6,7 @@ breakout_wh_dict = {
     'block': (8, 6),
     'playerscore': (44, 10),
     'live': (12, 10),
-    'playernumber': (4, 10)
+    'playernumber': (4, 10),
 }
 
 BREAKOUT_MAX_ABS_VELOCITY = 15

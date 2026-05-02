@@ -1,17 +1,19 @@
-import numpy as np
-import pygame
 import time
 import traceback
 
-from classes.helper import *
+import numpy as np
+import pygame
+
 from classes.envs.env import AtariEnv
+from classes.helper import *
 
 
-class EnvPlayer():
+class EnvPlayer:
     """
     EnvPlayer class enables user interaction with game environments
     Handles keyboard input mapping to game actions and manages game state
     """
+
     def __init__(self, env: AtariEnv):
         """
         Initialize environment player with game-specific controls
@@ -32,7 +34,8 @@ class EnvPlayer():
         # else:
         #     # Use environment's default key mapping
         self.keys2actions = self._normalize_keys2actions(
-            self.env.get_keys2actions())
+            self.env.get_keys2actions()
+        )
 
         self.running = True
         self.actions_enum = self.env.get_actions_enum()
@@ -67,10 +70,14 @@ class EnvPlayer():
                         else:
                             if slow:
                                 time.sleep(
-                                    0.1)  # Add delay if slow mode is enabled
+                                    0.1
+                                )  # Add delay if slow mode is enabled
                             action_index = self._get_action()
-                            action = self.actions_enum.get_all_possible_actions(
-                            )[action_index]
+                            action = (
+                                self.actions_enum.get_all_possible_actions()[
+                                    action_index
+                                ]
+                            )
                         actions.append(action)
 
                         if action == 'RESTART':
@@ -151,11 +158,13 @@ class EnvPlayer():
                 if event.key == pygame.K_m:  # M key for object inspection
                     objects = self.env.objects
 
-                if (event.key, ) in self.keys2actions.keys(
-                ):  # Add valid game control keys
+                if (
+                    event.key,
+                ) in self.keys2actions.keys():  # Add valid game control keys
                     self.current_keys_down.add(event.key)
 
             elif event.type == pygame.KEYUP:
-                if (event.key,
-                    ) in self.keys2actions.keys():  # Remove released keys
+                if (
+                    event.key,
+                ) in self.keys2actions.keys():  # Remove released keys
                     self.current_keys_down.remove(event.key)

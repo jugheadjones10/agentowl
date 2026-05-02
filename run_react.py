@@ -1,24 +1,15 @@
-
-from typing import List
-import os
+import logging
 import random
 
 import hydra
-import dill as pickle
-import logging
 import numpy as np
 from omegaconf import DictConfig
+from openai_hf_interface import choose_provider, create_llm
 
-from baselines.worldcoder import WorldCoder
-from learners.world_model_learner import PoEWorldLearner, WorldModelLearner
-from agents.agent import Agent
-from data.atari import load_atari_observations
 from classes.envs import *
 from classes.envs.object_tracker import *
 from classes.envs.renderer import get_human_renderer
-from classes.helper import set_global_constants, StateTransitionTriplet
-from openai_hf_interface import choose_provider, create_llm
-from eval import evaluate_world_model
+from classes.helper import set_global_constants
 
 log = logging.getLogger('main')
 log.setLevel(logging.INFO)
@@ -28,16 +19,16 @@ def set_seed(seed):
     """Set random seeds for reproducibility."""
     np.random.seed(seed)
     random.seed(seed)
-    
+
 
 instruction_prompt_mr = """
-You are playing a video game. Your goal is to collect the key. 
+You are playing a video game. Your goal is to collect the key.
 The actions you can take are: NOOP, UP, DOWN, RIGHT, LEFT, FIRE, LEFTFIRE, RIGHTFIRE.
 Additionally, you can think about the game state, by saying "THINK: <your thoughts>" and take action later.
 
 Here are examples of how to play the game:
 
-OBSERVATION: 
+OBSERVATION:
 
 List of objects:
 player object (id = 0) with x=76, y=73
@@ -102,14 +93,14 @@ wall (id = 21) touches platform (id = 16) with touch_side=top and touch_percent=
 wall (id = 21) touches platform (id = 17) with touch_side=bottom and touch_percent=0.1
 
 ACTION: THINK: The player is at (76, 73) and the key is at (13, 99).
-Currently, the player is on top of a platform (id = 8) and a ladder (id = 9). 
+Currently, the player is on top of a platform (id = 8) and a ladder (id = 9).
 To reach the key, the player can climb down the ladder to get closer to the key.
 
 OBSERVATION: OK.
 
 ACTION: DOWN
 
-OBSERVATION: 
+OBSERVATION:
 
 List of objects:
 player object (id = 0) with x=76, y=84
@@ -174,14 +165,14 @@ wall (id = 21) touches platform (id = 16) with touch_side=top and touch_percent=
 wall (id = 21) touches platform (id = 17) with touch_side=bottom and touch_percent=0.1
 
 ACTION: THINK: The player is at (76, 84) and the key is at (13, 99).
-Currently, the player is on right of a platform (id = 8) and on top of a ladder (id = 9). 
+Currently, the player is on right of a platform (id = 8) and on top of a ladder (id = 9).
 To reach the key, the player can climb down the ladder to get closer to the key.
 
 OBSERVATION: OK.
 
 ACTION: DOWN
 
-OBSERVATION: 
+OBSERVATION:
 
 List of objects:
 player object (id = 0) with x=76, y=87
@@ -246,14 +237,14 @@ wall (id = 21) touches platform (id = 16) with touch_side=top and touch_percent=
 wall (id = 21) touches platform (id = 17) with touch_side=bottom and touch_percent=0.1
 
 ACTION: THINK: The player is at (76, 87) and the key is at (13, 99).
-Currently, the player is below a platform (id = 8) and below a ladder (id = 9). 
+Currently, the player is below a platform (id = 8) and below a ladder (id = 9).
 Maybe I can try to move horizontally towards the key.
 
 OBSERVATION: OK.
 
 ACTION: LEFT
 
-OBSERVATION: 
+OBSERVATION:
 
 List of objects:
 player object (id = 0) with x=76, y=87
@@ -339,7 +330,7 @@ However, you should not generate ACTION: THINK: more than three times in a row.
 
 Here are examples of how to play the game:
 
-OBSERVATION: 
+OBSERVATION:
 
 List of objects:
 player object (id = 0) with x=140, y=96
@@ -362,7 +353,7 @@ OBSERVATION: OK.
 
 ACTION: LEFT
 
-OBSERVATION: 
+OBSERVATION:
 
 List of objects:
 player object (id = 0) with x=140, y=98
@@ -385,7 +376,7 @@ OBSERVATION: OK.
 
 ACTION: LEFT
 
-OBSERVATION: 
+OBSERVATION:
 
 List of objects:
 player object (id = 0) with x=140, y=115
@@ -431,44 +422,57 @@ OBSERVATION: OK.
 
 ACTION: RIGHT
 
-Now, Here is the real history of observations and actions, either take an ACTION: <action> or ACTION: THINK: <thoughts> about the game state. 
+Now, Here is the real history of observations and actions, either take an ACTION: <action> or ACTION: THINK: <thoughts> about the game state.
 DO NOT generate OBSERVATION: in your response
 And DO NOT generate ACTION: THINK: more than three times in a row.
 
 
 """
-    
-    
+
+
 def run_react(config, atari_env):
     # Create llm
     cache_mode = 'disk_to_memory' if config.use_memory else 'disk'
-    llm = create_llm('gpt-4o-2024-08-06' if config.provider ==
-                        'openai' else 'openai/gpt-4o-2024-08-06')
+    llm = create_llm(
+        'gpt-4o-2024-08-06'
+        if config.provider == 'openai'
+        else 'openai/gpt-4o-2024-08-06'
+    )
     llm.setup_cache(cache_mode, database_path=config.database_path)
     llm.set_default_kwargs({'timeout': 60})
-    
+
     # Prompt
-    instruction_prompt = instruction_prompt_mr if config.task.startswith('MontezumaRevenge') else instruction_prompt_pong
-    
+    instruction_prompt = (
+        instruction_prompt_mr
+        if config.task.startswith('MontezumaRevenge')
+        else instruction_prompt_pong
+    )
+
     obj_list, game_state = atari_env.reset()
     # for _ in range(50):
     #     obj_list, game_state = atari_env.step('NOOP')
-        
+
     # obj_list, game_state = atari_env.step('LEFT')
     # obj_list, game_state = atari_env.step('LEFT')
     # obj_list, game_state = atari_env.step('RIGHT')
     # log.info('OBSERVATION:\n\n{}'.format(obj_list.get_str_w_ints_w_touching(w_id=True)))
     # breakpoint()
-    
-    history_txt_lst = [f'OBSERVATION:\n\n{obj_list.get_str_w_ints_w_touching(w_id=True)}']
+
+    history_txt_lst = [
+        f'OBSERVATION:\n\n{obj_list.get_str_w_ints_w_touching(w_id=True)}'
+    ]
     all_actions = []
     ct = 0
     while True:
         ct += 1
         if len(history_txt_lst) > 16:
             history_txt_lst = history_txt_lst[-16:]
-            
-        outputs = llm.prompt([instruction_prompt + "\n\n".join(history_txt_lst) + '\n\n'], temperature=0, seed=config.seed)
+
+        outputs = llm.prompt(
+            [instruction_prompt + '\n\n'.join(history_txt_lst) + '\n\n'],
+            temperature=0,
+            seed=config.seed,
+        )
         log.info(f'Outputs: {outputs}')
         action = outputs[0].strip().split('ACTION:')[1].strip().split('\n')[0]
         if action.startswith('THINK:'):
@@ -476,44 +480,42 @@ def run_react(config, atari_env):
         else:
             obj_list, game_state = atari_env.step(action)
             observation = f'OBSERVATION:\n\n{obj_list.get_str_w_ints_w_touching(w_id=True)}'
-        
+
         history_txt_lst.append(f'ACTION: {action}')
         history_txt_lst.append(observation)
-        
+
         log.info(f'TOOK ACTION: {action}')
-        
+
         # if ct > 620:
         #     log.info(f'TOOK TOO MANY ACTIONS')
         #     breakpoint()
         #     break
-        
+
         if action.startswith('THINK:'):
             continue
-        
+
         all_actions.append(action)
         if game_state == GameState.GAMEOVER:
-            log.info(f'GAME OVER')
+            log.info('GAME OVER')
             break
-        
+
         if llm.get_info()['actual_cost'] > 30:
-            log.info(f'EXCEEDED COST LIMIT')
+            log.info('EXCEEDED COST LIMIT')
             break
-            
-        
+
         log.info(f'Iterations: {ct}')
         log.info(f'Actions taken: {len(all_actions)}')
         log.info(f'Last 10 actions: {all_actions[-10:]}')
         # txt = "\n\n".join(history_txt_lst)
         # log.info(f'History: {txt}')
-        
-        log.info(f'LLM cost: {llm.get_info()}')
-        
-    
-    log.info(f"Total actions: {len(all_actions)}")
-    log.info(f"Actions: {all_actions}")
-    
 
-@hydra.main(version_base=None, config_path="conf", config_name="config")
+        log.info(f'LLM cost: {llm.get_info()}')
+
+    log.info(f'Total actions: {len(all_actions)}')
+    log.info(f'Actions: {all_actions}')
+
+
+@hydra.main(version_base=None, config_path='conf', config_name='config')
 def main(config: DictConfig):
     """
     Main execution function that:
@@ -521,7 +523,7 @@ def main(config: DictConfig):
     2. Either loads or synthesizes a world model
     3. Runs interactive simulation or trains an agent
     4. Evaluates model performance
-    
+
     Args:
         config: Hydra configuration object containing all parameters
     """
@@ -536,12 +538,14 @@ def main(config: DictConfig):
 
     # Initialize game-specific constants
     set_global_constants(config.task)
-    
+
     if config.database_path is None:
         config.database_path = f'completions_atari_{config.task.lower()}_react{"" if config.seed == 0 else f"_s{config.seed}"}.db'
 
     renderer = get_human_renderer(config)
-    atari_env = create_atari_env(config, config.task, renderer=renderer, skip_gameover_if_possible=False)
+    atari_env = create_atari_env(
+        config, config.task, renderer=renderer, skip_gameover_if_possible=False
+    )
     run_react(config, atari_env)
 
 

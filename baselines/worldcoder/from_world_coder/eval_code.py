@@ -1,13 +1,16 @@
 #!/usr/bin/env python
-# coding=utf-8
 
 # ====== check test io ======
 
-import contextlib, io, signal
+import contextlib
+import io
+import signal
+
+
 @contextlib.contextmanager
 def time_limit(seconds):
     def signal_handler(signum, frame):
-        raise TimeoutException("Timed out!")
+        raise TimeoutException('Timed out!')
 
     signal.setitimer(signal.ITIMER_REAL, seconds)
     signal.signal(signal.SIGALRM, signal_handler)
@@ -24,6 +27,7 @@ def swallow_io():
         with contextlib.redirect_stderr(stream):
             with redirect_stdin(stream):
                 yield stream
+
 
 class TimeoutException(Exception):
     pass
@@ -47,9 +51,10 @@ class WriteOnlyStringIO(io.StringIO):
 
 
 class redirect_stdin(contextlib._RedirectStream):  # type: ignore
-    _stream = "stdin"
+    _stream = 'stdin'
 
-def eval_code(line, timeout=3., return_exec_globals=False, exec_globals=None):
+
+def eval_code(line, timeout=3.0, return_exec_globals=False, exec_globals=None):
     try:
         exec_globals = {} if exec_globals is None else exec_globals
         with swallow_io() as s:
@@ -70,5 +75,4 @@ def eval_code(line, timeout=3., return_exec_globals=False, exec_globals=None):
             str(e)
         except Exception as ee:
             return f'failed: in printing exception: {ee}\nPrinted outputs: {s.getvalue()}'
-        return f"failed: {e}\nPrinted outputs: {s.getvalue()}"
-
+        return f'failed: {e}\nPrinted outputs: {s.getvalue()}'

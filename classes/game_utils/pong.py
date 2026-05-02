@@ -29,4 +29,4 @@ class PongActions(BaseActions):
 
     @staticmethod
     def get_all_possible_actions():
-        return ['NOOP', 'FIRE', 'RIGHT', 'LEFT', "RIGHTFIRE", "LEFTFIRE"]
+        return ['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']

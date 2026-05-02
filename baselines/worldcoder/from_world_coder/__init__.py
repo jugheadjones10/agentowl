@@ -1,13 +1,18 @@
 import numpy as np
+
 # from .synthesizer import synthesis
 from .llm_utils import LLM
+
 
 def refine_world_model(
     init_transit_code,
     init_reward_code,
     experiences,
-    llm_default_args = {'model': 'gpt-4o', 'temperature': 1.0,},
-    max_budget=100, # $100
+    llm_default_args={
+        'model': 'gpt-4o',
+        'temperature': 1.0,
+    },
+    max_budget=100,  # $100
     bandits_C=20.0,
     np_rng=None,
 ):

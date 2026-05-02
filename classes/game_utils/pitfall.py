@@ -63,8 +63,22 @@ class PitfallActions(BaseActions):
 
     def get_all_possible_actions():
         return [
-            'NOOP', 'FIRE', 'UP', 'RIGHT', 'LEFT', 'DOWN', 'UPRIGHT', 'UPLEFT',
-            'DOWNRIGHT', 'DOWNLEFT', 'UPFIRE', 'RIGHTFIRE', 'LEFTFIRE',
-            'DOWNFIRE', 'UPRIGHTFIRE', 'UPLEFTFIRE', 'DOWNRIGHTFIRE',
-            'DOWNLEFTFIRE'
+            'NOOP',
+            'FIRE',
+            'UP',
+            'RIGHT',
+            'LEFT',
+            'DOWN',
+            'UPRIGHT',
+            'UPLEFT',
+            'DOWNRIGHT',
+            'DOWNLEFT',
+            'UPFIRE',
+            'RIGHTFIRE',
+            'LEFTFIRE',
+            'DOWNFIRE',
+            'UPRIGHTFIRE',
+            'UPLEFTFIRE',
+            'DOWNRIGHTFIRE',
+            'DOWNLEFTFIRE',
         ]

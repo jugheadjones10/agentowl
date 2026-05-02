@@ -1,16 +1,18 @@
-import math
 import logging
+import math
 
-from classes.helper import ObjListWithMemory, Constants
+from classes.helper import Constants, ObjListWithMemory
 from learners.models import WorldModel
 
 log = logging.getLogger('main')
 
 
 def manual_heuristics_factory(target_abstract_state, config):
-    targets = [(idx, int(x))
-               for idx, x in enumerate(target_abstract_state[1:-1].split(', '))
-               if int(x) != -1]
+    targets = [
+        (idx, int(x))
+        for idx, x in enumerate(target_abstract_state[1:-1].split(', '))
+        if int(x) != -1
+    ]
 
     def f(game_state, n):
         sm = 0
@@ -32,7 +34,7 @@ def manual_heuristics_factory(target_abstract_state, config):
                 obj = [x for x in cur_obj_list.objs if x.id == target[1]][0]
             except:
                 return -1000
-            
+
             try:
                 player_obj = cur_obj_list.get_objs_by_obj_type('player')[0]
             except:
@@ -40,14 +42,16 @@ def manual_heuristics_factory(target_abstract_state, config):
 
             # Compute heuristic value
             if config.heuristics == 'advanced':
-                sm += max(0, obj.left_side - player_obj.center_x) + max(
-                    0, player_obj.center_x - obj.right_side) + max(
-                        0, obj.top_side - player_obj.center_y) + max(
-                            0, player_obj.center_y - obj.bottom_side)
+                sm += (
+                    max(0, obj.left_side - player_obj.center_x)
+                    + max(0, player_obj.center_x - obj.right_side)
+                    + max(0, obj.top_side - player_obj.center_y)
+                    + max(0, player_obj.center_y - obj.bottom_side)
+                )
             elif config.heuristics == 'basic':
-                sm += abs(obj.center_x -
-                          player_obj.center_x) + abs(obj.center_y -
-                                                     player_obj.center_y)
+                sm += abs(obj.center_x - player_obj.center_x) + abs(
+                    obj.center_y - player_obj.center_y
+                )
             else:
                 raise NotImplementedError
         # return 1 / (sm + n + 1)
@@ -66,21 +70,25 @@ class Node:
         self.last_action_seq = last_action_seq
 
     def is_fully_expanded(self):
-        return len(self.children) == len(self.state.old_get_legal_action_seqs())
+        return len(self.children) == len(
+            self.state.old_get_legal_action_seqs()
+        )
 
     def best_child(self, exploration_weight=1.0):
         """Get the best child node based on UCT."""
         if not self.children:
-            raise Exception("No children nodes to select from!")
+            raise Exception('No children nodes to select from!')
         weights = [
             # (child.value / (child.visits + 1e-6)) +
-            (child.value) + exploration_weight *
-            math.sqrt(math.log(self.visits + 1) / (child.visits + 1e-6))
+            (child.value)
+            + exploration_weight
+            * math.sqrt(math.log(self.visits + 1) / (child.visits + 1e-6))
             for child in self.children
         ]
         # but there might be no weights if not choose terminal children
-        return self.children[max(index for index, v in enumerate(weights)
-                                 if v == max(weights))]
+        return self.children[
+            max(index for index, v in enumerate(weights) if v == max(weights))
+        ]
 
     def expand(self):
         """Expand a node by adding a child for an untried action."""
@@ -92,7 +100,7 @@ class Node:
                 child_node = Node(next_state, self, action_seq)
                 self.children.append(child_node)
                 return child_node
-        raise Exception("No actions to expand")
+        raise Exception('No actions to expand')
 
     def backpropagate(self, value):
         """Update the node and its ancestors with the simulation result."""
@@ -107,35 +115,42 @@ class MCTS:
     def __init__(self, config):
         self.config = config
         self.exploration_weight = self.config.mcts.exploration_weight
-        
+
     def search(self, *args, **kwargs):
         res = None
         if kwargs['iterations'] != 0:
             res = self.search_old(*args, **kwargs)
         if res is None or (isinstance(res, tuple) and res[0] is None):
-            return self._search(*args, **kwargs, future_length=self.config.mcts.future_length)
+            return self._search(
+                *args, **kwargs, future_length=self.config.mcts.future_length
+            )
         return res
-        
-    def _search(self,
-               cur_obj_list: ObjListWithMemory,
-               target_abstract_state: str,
-               world_model: WorldModel,
-               iterations: int = 2000,
-               target_id: int = None,
-               ret_concrete_state: bool = False,
-               future_length: int = 1):
+
+    def _search(
+        self,
+        cur_obj_list: ObjListWithMemory,
+        target_abstract_state: str,
+        world_model: WorldModel,
+        iterations: int = 2000,
+        target_id: int = None,
+        ret_concrete_state: bool = False,
+        future_length: int = 1,
+    ):
         world_model.enable_cache()
-        initial_state = GameState(world_model,
-                                  cur_obj_list,
-                                  target_abstract_state,
-                                  self.config,
-                                  target_id=target_id)
-        heuristics_f = manual_heuristics_factory(target_abstract_state,
-                                                 self.config)
+        initial_state = GameState(
+            world_model,
+            cur_obj_list,
+            target_abstract_state,
+            self.config,
+            target_id=target_id,
+        )
+        heuristics_f = manual_heuristics_factory(
+            target_abstract_state, self.config
+        )
         root = Node(initial_state)
 
         goal = None
-        
+
         # Greedy search to get to the goal
         node = root
         actions = []
@@ -144,13 +159,17 @@ class MCTS:
         while not node.state.is_goal() and ct < self.config.mcts.n_tries:
             if node.state.is_terminal():
                 break
-                
-            legal_action_seqs = node.state.new_get_legal_action_seqs(length=future_length)
+
+            legal_action_seqs = node.state.new_get_legal_action_seqs(
+                length=future_length
+            )
             best_action_seq = None
             best_heuristic = float('-inf')
             for action_seq in legal_action_seqs:
                 next_state = node.state.new_perform_action_seq(action_seq)
-                heuristic_value = heuristics_f(next_state, len(actions + action_seq))
+                heuristic_value = heuristics_f(
+                    next_state, len(actions + action_seq)
+                )
                 if heuristic_value > best_heuristic and not next_state.died:
                     best_heuristic = heuristic_value
                     best_action_seq = action_seq
@@ -163,20 +182,24 @@ class MCTS:
                 best_action_seq = node.last_action_seq[:1]
                 actions = actions[:-future_length]
                 node = node.parent
-                
+
             # best_action_seq = best_action_seq[:1]
-            node = Node(node.state.new_perform_action_seq(best_action_seq), node, best_action_seq)
+            node = Node(
+                node.state.new_perform_action_seq(best_action_seq),
+                node,
+                best_action_seq,
+            )
             actions = actions + best_action_seq
             node.parent.children.append(node)
-            
+
             # log.info(f'Search iteration {ct}: {actions} {best_heuristic} {node.state.get_abstract_state()}')
             # log.info(f'Player position: {node.state.cur_obj_list.get_objs_by_obj_type("player")[0].center_x} {node.state.cur_obj_list.get_objs_by_obj_type("player")[0].center_y}')
             # log.info(f'Skull position: {node.state.cur_obj_list.get_objs_by_obj_type("skull")[0].center_x} {node.state.cur_obj_list.get_objs_by_obj_type("skull")[0].center_y}')
             ct += 1
-        
+
         if node.state.is_goal():
             goal = node
-        
+
         if goal is None:
             # log.info(f'No goal found in {ct} iterations')
             if ret_concrete_state:
@@ -193,27 +216,32 @@ class MCTS:
             return sum(reversed_plan[::-1], []), goal.state.cur_obj_list
         return sum(reversed_plan[::-1], [])
 
-    def search_old(self,
-               cur_obj_list: ObjListWithMemory,
-               target_abstract_state: str,
-               world_model: WorldModel,
-               iterations: int = 2000,
-               target_id: int = None,
-               ret_concrete_state: bool = False):
+    def search_old(
+        self,
+        cur_obj_list: ObjListWithMemory,
+        target_abstract_state: str,
+        world_model: WorldModel,
+        iterations: int = 2000,
+        target_id: int = None,
+        ret_concrete_state: bool = False,
+    ):
         world_model.enable_cache()
-        initial_state = GameState(world_model,
-                                  cur_obj_list,
-                                  target_abstract_state,
-                                  self.config,
-                                  target_id=target_id)
-        heuristics_f = manual_heuristics_factory(target_abstract_state,
-                                                 self.config)
+        initial_state = GameState(
+            world_model,
+            cur_obj_list,
+            target_abstract_state,
+            self.config,
+            target_id=target_id,
+        )
+        heuristics_f = manual_heuristics_factory(
+            target_abstract_state, self.config
+        )
         root = Node(initial_state)
 
         goal = None
 
         for ct in range(iterations):
-            w = 10**(ct // 1000)
+            w = 10 ** (ct // 1000)
 
             node = root
 
@@ -264,14 +292,16 @@ class MCTS:
 
 # Define the game-specific state class
 class GameState:
-    def __init__(self,
-                 world_model: WorldModel,
-                 cur_obj_list: ObjListWithMemory,
-                 target_abstract_state,
-                 config,
-                 died=False,
-                 depth=0,
-                 target_id=None):
+    def __init__(
+        self,
+        world_model: WorldModel,
+        cur_obj_list: ObjListWithMemory,
+        target_abstract_state,
+        config,
+        died=False,
+        depth=0,
+        target_id=None,
+    ):
         self.world_model = world_model
         self.target_abstract_state = target_abstract_state
         self.cur_obj_list = cur_obj_list
@@ -283,12 +313,17 @@ class GameState:
     def get_abstract_state(self):
         if self.target_id is not None:
             try:
-                player_obj = self.cur_obj_list.get_objs_by_obj_type('player')[0]
+                player_obj = self.cur_obj_list.get_objs_by_obj_type('player')[
+                    0
+                ]
                 target_obj = self.cur_obj_list.get_obj_by_id(self.target_id)
             except:
                 return '[-1]'
-            return str([self.target_id
-                        ]) if player_obj.overlaps(target_obj) else '[-1]'
+            return (
+                str([self.target_id])
+                if player_obj.overlaps(target_obj)
+                else '[-1]'
+            )
         else:
             return str(self.world_model.get_features(self.cur_obj_list))
 
@@ -299,8 +334,11 @@ class GameState:
                 target_obj = obj_list.get_obj_by_id(self.target_id)
             except:
                 return '[-1]'
-            return str([self.target_id
-                        ]) if player_obj.overlaps(target_obj) else '[-1]'
+            return (
+                str([self.target_id])
+                if player_obj.overlaps(target_obj)
+                else '[-1]'
+            )
         else:
             return str(self.world_model.get_features(obj_list))
 
@@ -310,23 +348,28 @@ class GameState:
         new_obj_list = self.cur_obj_list.deepcopy()
         memory = new_obj_list.memory
 
-        new_obj_list = self.world_model.sample_next_scene(new_obj_list,
-                                                          'NOOP',
-                                                          memory=memory,
-                                                          det=self.config.det_world_model)
-        
-        return self.abstract_state(ObjListWithMemory(new_obj_list, memory)) == self.abstract_state(
-            self.cur_obj_list)
+        new_obj_list = self.world_model.sample_next_scene(
+            new_obj_list,
+            'NOOP',
+            memory=memory,
+            det=self.config.det_world_model,
+        )
+
+        return self.abstract_state(
+            ObjListWithMemory(new_obj_list, memory)
+        ) == self.abstract_state(self.cur_obj_list)
 
     def old_get_legal_action_seqs(self):
         primitives = Constants.ACTIONS
         if self.config.mcts.sticky_actions:
-            return [[primitive] * ct for primitive in primitives
-                    for ct in [8, 4, 1]]
+            return [
+                [primitive] * ct
+                for primitive in primitives
+                for ct in [8, 4, 1]
+            ]
         else:
-            return [[primitive] * ct for primitive in primitives
-                    for ct in [1]]
-            
+            return [[primitive] * ct for primitive in primitives for ct in [1]]
+
     def old_perform_action_seq(self, action_seq):
         """Return the state resulting from performing an action."""
         cur_obj_list = self.cur_obj_list.deepcopy()  # Can we remove this?
@@ -334,30 +377,38 @@ class GameState:
         memory = cur_obj_list.memory
         for action in action_seq:
             old_obj_list = cur_obj_list
-            cur_obj_list = self.world_model.sample_next_scene(cur_obj_list,
-                                                              action,
-                                                              memory=memory,
-                                                              det=self.config.det_world_model)
+            cur_obj_list = self.world_model.sample_next_scene(
+                cur_obj_list,
+                action,
+                memory=memory,
+                det=self.config.det_world_model,
+            )
             memory.add_obj_list_and_action(old_obj_list, action)
 
             # Check if died
             player_objs = cur_obj_list.get_objs_by_obj_type('player')
-            if len(player_objs
-                   ) != len(old_obj_list.get_objs_by_obj_type('player')) or player_objs[0].history['deleted'][-2] == 1:
+            if (
+                len(player_objs)
+                != len(old_obj_list.get_objs_by_obj_type('player'))
+                or player_objs[0].history['deleted'][-2] == 1
+            ):
                 died = True
                 break
-        return GameState(self.world_model,
-                         ObjListWithMemory(cur_obj_list, memory),
-                         self.target_abstract_state,
-                         self.config,
-                         died,
-                         self.depth + 1,
-                         target_id=self.target_id)
-        
+        return GameState(
+            self.world_model,
+            ObjListWithMemory(cur_obj_list, memory),
+            self.target_abstract_state,
+            self.config,
+            died,
+            self.depth + 1,
+            target_id=self.target_id,
+        )
+
     def new_get_legal_action_seqs(self, length=1):
         primitives = Constants.ACTIONS
-        return [[primitive] * ct for primitive in primitives
-                for ct in [length]]
+        return [
+            [primitive] * ct for primitive in primitives for ct in [length]
+        ]
 
     def new_perform_action_seq(self, action_seq):
         """Return the state resulting from performing an action."""
@@ -365,27 +416,34 @@ class GameState:
         memory = cur_obj_list.memory
         for action in action_seq:
             old_obj_list = cur_obj_list
-            cur_obj_list = self.world_model.sample_next_scene(cur_obj_list,
-                                                              action,
-                                                              memory=memory,
-                                                              det=self.config.det_world_model)
+            cur_obj_list = self.world_model.sample_next_scene(
+                cur_obj_list,
+                action,
+                memory=memory,
+                det=self.config.det_world_model,
+            )
             memory.add_obj_list_and_action(old_obj_list, action)
-            
-            state = GameState(self.world_model,
-                         ObjListWithMemory(cur_obj_list, memory),
-                         self.target_abstract_state,
-                         self.config,
-                         False,
-                         self.depth + 1,
-                         target_id=self.target_id)
+
+            state = GameState(
+                self.world_model,
+                ObjListWithMemory(cur_obj_list, memory),
+                self.target_abstract_state,
+                self.config,
+                False,
+                self.depth + 1,
+                target_id=self.target_id,
+            )
 
             # Check if died
             player_objs = cur_obj_list.get_objs_by_obj_type('player')
-            if len(player_objs
-                   ) != len(old_obj_list.get_objs_by_obj_type('player')) or player_objs[0].history['deleted'][-2] == 1:
+            if (
+                len(player_objs)
+                != len(old_obj_list.get_objs_by_obj_type('player'))
+                or player_objs[0].history['deleted'][-2] == 1
+            ):
                 state.died = True
                 break
-            
+
             if state.is_goal():
                 break
         return state
@@ -395,8 +453,11 @@ class GameState:
         return self.died or self.is_goal()
 
     def is_goal(self):
-        return (self.get_abstract_state() == self.target_abstract_state
-                ) and self.is_stable_state() and (not self.died)
+        return (
+            (self.get_abstract_state() == self.target_abstract_state)
+            and self.is_stable_state()
+            and (not self.died)
+        )
 
     def get_result(self):
         """Get the result of the game (a numeric score)."""

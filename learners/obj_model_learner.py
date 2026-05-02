@@ -1,14 +1,15 @@
-from typing import Optional, List, Tuple, Union, Awaitable
 import asyncio
-import dill as pickle
 import logging
-from openai_hf_interface import create_llm
-from omegaconf import DictConfig
+from collections.abc import Awaitable
 
+import dill as pickle
+from omegaconf import DictConfig
+from openai_hf_interface import create_llm
+
+from classes.helper import *
+from learners.models import *
 from learners.synthesizer import Synthesizer
 from learners.utils import *
-from learners.models import *
-from classes.helper import *
 from programs import *
 
 log = logging.getLogger('main')
@@ -21,14 +22,20 @@ class ObjModelLearner:
     Manages both creation and non-creation object behaviors using mixture of
     experts models.
     """
-    def __init__(self, config: DictConfig, obj_type: str,
-                 size_change_flag: bool, normal_modules: List[Synthesizer],
-                 restart_modules: List[Synthesizer],
-                 constraint_modules: List[Synthesizer],
-                 pomdp_modules: List[Synthesizer]):
+
+    def __init__(
+        self,
+        config: DictConfig,
+        obj_type: str,
+        size_change_flag: bool,
+        normal_modules: list[Synthesizer],
+        restart_modules: list[Synthesizer],
+        constraint_modules: list[Synthesizer],
+        pomdp_modules: list[Synthesizer],
+    ):
         """
         Initialize the object model learner with configuration and module specifications.
-        
+
         Args:
             config: Configuration object containing learning parameters
             obj_type: Type of object to model
@@ -43,8 +50,11 @@ class ObjModelLearner:
 
         # Create llm
         cache_mode = 'disk_to_memory' if self.config.use_memory else 'disk'
-        self.llm = create_llm('gpt-4o-2024-08-06' if self.config.provider ==
-                              'openai' else 'openai/gpt-4o-2024-08-06')
+        self.llm = create_llm(
+            'gpt-4o-2024-08-06'
+            if self.config.provider == 'openai'
+            else 'openai/gpt-4o-2024-08-06'
+        )
         self.llm.setup_cache(cache_mode, database_path=config.database_path)
         self.llm.set_default_kwargs({'timeout': 60})
 
@@ -74,11 +84,12 @@ class ObjModelLearner:
         self.objects_selector = ObjTypeObjSelector(self.obj_type)
         self.interactions_selector = ObjTypeInteractionSelector(self.obj_type)
         self.player_interactions_selector = ObjTypeInteractionSelector(
-            'player')
+            'player'
+        )
 
         # Create modifiable variables
         self.processed_obs_count = 0
-        self.transitions: List[StateTransitionTriplet] = []
+        self.transitions: list[StateTransitionTriplet] = []
         # hard coded values
         self.creation_keyword = 'create'
         self.batch_size = 10
@@ -90,18 +101,22 @@ class ObjModelLearner:
             self.config,
             obj_type=self.obj_type,
             objects_selector=self.objects_selector.set_mode('non_creation'),
-            size_change_flag=self.size_change_flag)
+            size_change_flag=self.size_change_flag,
+        )
         self.moe_creation = MoEObjModel(
             'creation',
             self.config,
             obj_type=self.obj_type,
             objects_selector=self.objects_selector.set_mode('creation'),
-            size_change_flag=self.size_change_flag)
-        self.constraints = Constraints(self.obj_type,
-                                       self.interactions_selector)
+            size_change_flag=self.size_change_flag,
+        )
+        self.constraints = Constraints(
+            self.obj_type, self.interactions_selector
+        )
 
-    def add_datapoint_and_infer_moe(self,
-                                    x: StateTransitionTriplet) -> ObjTypeModel:
+    def add_datapoint_and_infer_moe(
+        self, x: StateTransitionTriplet
+    ) -> ObjTypeModel:
         # Adds a datapoint and triggers the inference process.
         self.add_datapoint(x)
         return self.infer_moe()
@@ -112,10 +127,14 @@ class ObjModelLearner:
 
     def return_obj_type_model(self) -> ObjTypeModel:
         # Returns object type model
-        return ObjTypeModel(self.obj_type, self.moe_non_creation,
-                            self.moe_creation, self.constraints)
+        return ObjTypeModel(
+            self.obj_type,
+            self.moe_non_creation,
+            self.moe_creation,
+            self.constraints,
+        )
 
-    def return_constraints(self) -> Optional[Constraints]:
+    def return_constraints(self) -> Constraints | None:
         if self.obj_type == 'player':
             return self.constraints
         return None
@@ -131,8 +150,10 @@ class ObjModelLearner:
 
         # Load from recent checkpoints
         for chkpt in range(
-                len(self.transitions) // self.save_freq * self.save_freq, 0,
-                -self.save_freq):
+            len(self.transitions) // self.save_freq * self.save_freq,
+            0,
+            -self.save_freq,
+        ):
             if self.load(chkpt):
                 break
 
@@ -141,22 +162,26 @@ class ObjModelLearner:
             # Batch indices
             indices = np.arange(
                 self.processed_obs_count,
-                min(self.processed_obs_count + self.batch_size,
-                    len(self.transitions)))
+                min(
+                    self.processed_obs_count + self.batch_size,
+                    len(self.transitions),
+                ),
+            )
 
             # Run synthesizers
             log.info('--- Run fully observable MDP synthesizers ---')
             to_be_run_indices = self._grab_surprising_indices(indices)
             to_be_run = [
                 self._a_infer_moe_at_transition(
-                    self.transitions[:idx + 1],
-                    with_constraint=(len(self.constraint_synthesizers) > 0))
+                    self.transitions[: idx + 1],
+                    with_constraint=(len(self.constraint_synthesizers) > 0),
+                )
                 for idx in to_be_run_indices
             ]
             asyncio.run(await_gather(to_be_run))
             log.info(f'Current llm spending {self.llm.get_info()}')
             if len(to_be_run) > 0:
-                self._update_moe(self.transitions[:indices[-1] + 1])
+                self._update_moe(self.transitions[: indices[-1] + 1])
             else:
                 log.info(
                     f'No new fully observable MDP rules for datapoints ({indices[0]} to {indices[-1]})'
@@ -167,15 +192,17 @@ class ObjModelLearner:
             log.info('--- Run POMDP synthesizers ---')
             to_be_run_indices = self._grab_surprising_indices(indices)
             to_be_run = [
-                self._a_infer_moe_at_transition(self.transitions[:idx + 1],
-                                                with_constraint=False,
-                                                with_full_history=True)
+                self._a_infer_moe_at_transition(
+                    self.transitions[: idx + 1],
+                    with_constraint=False,
+                    with_full_history=True,
+                )
                 for idx in to_be_run_indices
             ]
             asyncio.run(await_gather(to_be_run))
             log.info(f'Current llm spending {self.llm.get_info()}')
             if len(to_be_run) > 0:
-                self._update_moe(self.transitions[:indices[-1] + 1])
+                self._update_moe(self.transitions[: indices[-1] + 1])
             else:
                 log.info(
                     f'No new POMDP rules for datapoints ({indices[0]} to {indices[-1]})'
@@ -190,7 +217,8 @@ class ObjModelLearner:
             if self.processed_obs_count % self.save_freq == 0:
                 os.makedirs(
                     f'saved_checkpoints_{self.config.task}{self.config.obs_suffix}{"" if self.config.seed == 0 else f"_s{self.config.seed}"}/{self.obj_type}',
-                    exist_ok=True)
+                    exist_ok=True,
+                )
                 self.save()
 
         self._update_moe(self.transitions, is_final=True)
@@ -206,17 +234,24 @@ class ObjModelLearner:
         indices = np.arange(self.processed_obs_count, len(self.transitions))
 
         # Run synthesizers
-        log.info('--- Run fully observable and POMDP synthesizers together ---')
-        to_be_run_indices = self._grab_surprising_indices(indices, verbose=False)
+        log.info(
+            '--- Run fully observable and POMDP synthesizers together ---'
+        )
+        to_be_run_indices = self._grab_surprising_indices(
+            indices, verbose=False
+        )
         to_be_run = [
-            self._a_infer_moe_at_transition(self.transitions[:idx + 1],
-                                            with_constraint=False)
+            self._a_infer_moe_at_transition(
+                self.transitions[: idx + 1], with_constraint=False
+            )
             for idx in to_be_run_indices
         ]
         to_be_run = to_be_run + [
-            self._a_infer_moe_at_transition(self.transitions[:idx + 1],
-                                            with_constraint=False,
-                                            with_full_history=True)
+            self._a_infer_moe_at_transition(
+                self.transitions[: idx + 1],
+                with_constraint=False,
+                with_full_history=True,
+            )
             for idx in to_be_run_indices
         ]
         asyncio.run(await_gather(to_be_run))
@@ -227,14 +262,17 @@ class ObjModelLearner:
             log.info(
                 f'No new rules for datapoints ({indices[0]} to {indices[-1]})'
             )
-        log.info('--- Done running fully observable and POMDP synthesizers together ---')
+        log.info(
+            '--- Done running fully observable and POMDP synthesizers together ---'
+        )
 
         # Update checkpoint
         self.processed_obs_count = indices[-1] + 1
 
         os.makedirs(
             f'saved_checkpoints_{self.config.task}{self.config.obs_suffix}{"" if self.config.seed == 0 else f"_s{self.config.seed}"}/{self.obj_type}',
-            exist_ok=True)
+            exist_ok=True,
+        )
         self.save()
 
         return self.return_obj_type_model()
@@ -249,10 +287,13 @@ class ObjModelLearner:
 
         # Run synthesizers
         log.info('--- Run fully observable MDP synthesizers ---')
-        to_be_run_indices = self._grab_surprising_indices(indices, verbose=False)
+        to_be_run_indices = self._grab_surprising_indices(
+            indices, verbose=False
+        )
         to_be_run = [
-            self._a_infer_moe_at_transition(self.transitions[idx:idx + 1],
-                                            with_constraint=False)
+            self._a_infer_moe_at_transition(
+                self.transitions[idx : idx + 1], with_constraint=False
+            )
             for idx in to_be_run_indices
         ]
         asyncio.run(await_gather(to_be_run))
@@ -270,12 +311,15 @@ class ObjModelLearner:
 
         return self.return_obj_type_model()
 
-    def _update_moe(self,
-                    transitions: list[StateTransitionTriplet],
-                    is_final: Optional[bool] = False,
-                    fast_fitting: Optional[bool] = False):
+    def _update_moe(
+        self,
+        transitions: list[StateTransitionTriplet],
+        is_final: bool | None = False,
+        fast_fitting: bool | None = False,
+    ):
         non_creation_c, creation_c = self._separate_creation_in_observation(
-            transitions)
+            transitions
+        )
 
         if fast_fitting:
             log.info('Non creation weight fitting...')
@@ -293,13 +337,14 @@ class ObjModelLearner:
         # self.moe_creation.prune_programs_with_c(transitions)
         self.moe_non_creation.prune_programs()
         self.moe_creation.prune_programs()
-            
 
         if is_final:
             self.constraints.prune_programs(transitions)
             self.save(final=True)
 
-    def _grab_surprising_indices(self, indices: List[int], verbose=True) -> List[int]:
+    def _grab_surprising_indices(
+        self, indices: list[int], verbose=True
+    ) -> list[int]:
         """
         Identify indices of observations that are not well explained by current models.
         """
@@ -312,11 +357,11 @@ class ObjModelLearner:
                     log.info(f'Not explaining obs at {idx} well')
                     log.info(f'Inference at time {idx}')
                     log.info(
-                        f"Trying to account for\nInput:\n{self.objects_selector(x.input_state)}\n"
-                        +
-                        f"Interactions:\n{self.player_interactions_selector(x.input_state.get_obj_interactions())}\n"
-                        + f"Action:\n{x.event}\n" +
-                        f"Output:\n{self.objects_selector(x.output_state)}")
+                        f'Trying to account for\nInput:\n{self.objects_selector(x.input_state)}\n'
+                        + f'Interactions:\n{self.player_interactions_selector(x.input_state.get_obj_interactions())}\n'
+                        + f'Action:\n{x.event}\n'
+                        + f'Output:\n{self.objects_selector(x.output_state)}'
+                    )
                 ret_indices.append(idx)
             else:
                 if verbose:
@@ -324,13 +369,14 @@ class ObjModelLearner:
         return ret_indices
 
     async def _a_infer_moe_at_transition(
-            self,
-            c: list[StateTransitionTriplet],
-            with_constraint=True,
-            with_full_history=False) -> Awaitable[None]:
+        self,
+        c: list[StateTransitionTriplet],
+        with_constraint=True,
+        with_full_history=False,
+    ) -> Awaitable[None]:
         """
         Asynchronously infer new rules from observations using appropriate synthesizers.
-        
+
         Args:
             c: List of state transition observations
             with_constraint: Whether to include constraint synthesis
@@ -338,7 +384,8 @@ class ObjModelLearner:
         """
         if with_full_history and with_constraint:
             raise Exception(
-                'Cannot have both with_full_history and with_constraint')
+                'Cannot have both with_full_history and with_constraint'
+            )
         if with_constraint and len(self.constraint_synthesizers) == 0:
             raise Exception(
                 'Cannot have with_constraint if no constraint synthesizers are given'
@@ -389,67 +436,89 @@ class ObjModelLearner:
         else:
             new_context_lengths = [-1] * len(new_rules)
 
-        new_non_creation_rules, new_non_creation_context_lengths, new_creation_rules, new_creation_context_lengths = self._separate_creation_rules(
-            new_rules, new_context_lengths)
+        (
+            new_non_creation_rules,
+            new_non_creation_context_lengths,
+            new_creation_rules,
+            new_creation_context_lengths,
+        ) = self._separate_creation_rules(new_rules, new_context_lengths)
         self.moe_non_creation.extend_rules(
             new_non_creation_rules,
             c,
-            context_lengths=new_non_creation_context_lengths)
+            context_lengths=new_non_creation_context_lengths,
+        )
         self.moe_creation.extend_rules(
-            new_creation_rules,
-            c,
-            context_lengths=new_creation_context_lengths)
+            new_creation_rules, c, context_lengths=new_creation_context_lengths
+        )
 
-        log.debug(f'Done')
+        log.debug('Done')
 
     def _separate_creation_rules(
-        self,
-        rules: List[str],
-        context_lengths: Optional[List[int]] = None
-    ) -> Tuple[List[str], List[str]]:
+        self, rules: list[str], context_lengths: list[int] | None = None
+    ) -> tuple[list[str], list[str]]:
         """Split rules into creation and non-creation related rules."""
         if context_lengths is None:
             return [
                 rule for rule in rules if self.creation_keyword not in rule
             ], [rule for rule in rules if self.creation_keyword in rule]
         else:
-            return [rule for rule in rules if self.creation_keyword not in rule], \
-                [context_length for rule, context_length in zip(rules, context_lengths) if self.creation_keyword not in rule], \
-                [rule for rule in rules if self.creation_keyword in rule], \
-                [context_length for rule, context_length in zip(rules, context_lengths) if self.creation_keyword in rule], \
+            return (
+                [rule for rule in rules if self.creation_keyword not in rule],
+                [
+                    context_length
+                    for rule, context_length in zip(rules, context_lengths)
+                    if self.creation_keyword not in rule
+                ],
+                [rule for rule in rules if self.creation_keyword in rule],
+                [
+                    context_length
+                    for rule, context_length in zip(rules, context_lengths)
+                    if self.creation_keyword in rule
+                ],
+            )
 
     def _separate_creation_in_observation(
-        self, c: List[StateTransitionTriplet]
-    ) -> Tuple[List[StateTransitionTriplet], List[StateTransitionTriplet]]:
+        self, c: list[StateTransitionTriplet]
+    ) -> tuple[list[StateTransitionTriplet], list[StateTransitionTriplet]]:
         # Segregates creation events from non-creation events in observations.
         non_creation_c, creation_c = [], []
         for x in c:
-            _, _, leftover_list2 = match_two_obj_lists(x.input_state,
-                                                       x.output_state)
+            _, _, leftover_list2 = match_two_obj_lists(
+                x.input_state, x.output_state
+            )
             non_creation_x = StateTransitionTriplet(
-                x.input_state.deepcopy(), x.event,
-                ObjList([
-                    x.output_state[idx] for idx in range(len(x.output_state))
-                    if idx not in leftover_list2
-                ]))
+                x.input_state.deepcopy(),
+                x.event,
+                ObjList(
+                    [
+                        x.output_state[idx]
+                        for idx in range(len(x.output_state))
+                        if idx not in leftover_list2
+                    ]
+                ),
+            )
             creation_x = StateTransitionTriplet(
                 x.input_state.deepcopy(),
                 x.event,
-                ObjList([
-                    x.output_state[idx] for idx in range(len(x.output_state))
-                    if idx in leftover_list2
-                ]),
-                add_ghost=False)
+                ObjList(
+                    [
+                        x.output_state[idx]
+                        for idx in range(len(x.output_state))
+                        if idx in leftover_list2
+                    ]
+                ),
+                add_ghost=False,
+            )
             non_creation_c.append(non_creation_x)
             creation_c.append(creation_x)
         return non_creation_c, creation_c
 
-    def _explain_well(self,
-                      idx: int,
-                      num: Optional[bool] = False) -> Union[bool, float]:
+    def _explain_well(
+        self, idx: int, num: bool | None = False
+    ) -> bool | float:
         """
         Check if current models can explain given observations well.
-        
+
         Args:
             c: Observations to check
             num: If True, return numerical score instead of boolean
@@ -457,8 +526,9 @@ class ObjModelLearner:
         """
         try:
             x = self.transitions[idx]
-            non_creation_c, creation_c = self._separate_creation_in_observation(
-                [x])
+            non_creation_c, creation_c = (
+                self._separate_creation_in_observation([x])
+            )
             non_creation_x = non_creation_c[0]
             creation_x = creation_c[0]
 
@@ -468,20 +538,24 @@ class ObjModelLearner:
                 non_creation_x.event,
                 non_creation_x.output_state,
                 memory=memory,
-                params=np.clip(self.moe_non_creation.params, 0,
-                               10),  # Clip just in case
+                params=np.clip(
+                    self.moe_non_creation.params, 0, 10
+                ),  # Clip just in case
                 use_torch=False,
-                precompute_index=-1)
+                precompute_index=-1,
+            )
 
             obj2 = self.moe_creation.evaluate_logprobs(
                 creation_x.input_state,
                 creation_x.event,
                 creation_x.output_state,
                 memory=memory,
-                params=np.clip(self.moe_creation.params, 0,
-                               10),  # Clip just in case
+                params=np.clip(
+                    self.moe_creation.params, 0, 10
+                ),  # Clip just in case
                 use_torch=False,
-                precompute_index=-1)
+                precompute_index=-1,
+            )
 
             obj1, obj2 = -obj1 * 1000, -obj2 * 1000
         except:
@@ -495,13 +569,13 @@ class ObjModelLearner:
             return np.max([obj1, obj2], axis=0) / 1000
         return (np.max([obj1, obj2], axis=0) / 1000) <= 0.2
 
-    def load(self, checkpoint: Optional[int]) -> bool:
+    def load(self, checkpoint: int | None) -> bool:
         """
         Loads model state from a checkpoint file.
-        
+
         Args:
             checkpoint: Checkpoint number to load, or None for final checkpoint
-            
+
         Returns:
             bool: True if load successful, False otherwise
         """
@@ -509,7 +583,7 @@ class ObjModelLearner:
         if not os.path.exists(path):
             return False
 
-        with open(path, "rb") as f:
+        with open(path, 'rb') as f:
             data = pickle.load(f)
 
         if len(tuple(data)) == 8:
@@ -519,14 +593,17 @@ class ObjModelLearner:
         elif len(tuple(data)) == 11:
             self._load_11_tuple_format(data)
         else:
-            raise NotImplementedError("Unknown checkpoint format")
+            raise NotImplementedError('Unknown checkpoint format')
 
-        self.processed_obs_count = checkpoint if isinstance(
-            checkpoint, int) else len(self.transitions)
+        self.processed_obs_count = (
+            checkpoint
+            if isinstance(checkpoint, int)
+            else len(self.transitions)
+        )
         log.info(f'Loaded checkpoint {path}')
         return True
 
-    def _get_checkpoint_path(self, checkpoint: Optional[int]) -> str:
+    def _get_checkpoint_path(self, checkpoint: int | None) -> str:
         """Gets the file path for the checkpoint"""
         if self.config.checkpoint_folder is not None:
             checkpoint_folder = self.config.checkpoint_folder
@@ -539,11 +616,17 @@ class ObjModelLearner:
 
     def _load_9_tuple_format(self, data: tuple) -> None:
         """Loads data in legacy 9-tuple format"""
-        (self.moe_non_creation.rules, self.moe_non_creation.params,
-         self.moe_non_creation.fitteds, self.moe_non_creation.precompute_dist,
-         self.moe_creation.rules, self.moe_creation.params,
-         self.moe_creation.fitteds, self.moe_creation.precompute_dist,
-         self.constraints.rules) = data
+        (
+            self.moe_non_creation.rules,
+            self.moe_non_creation.params,
+            self.moe_non_creation.fitteds,
+            self.moe_non_creation.precompute_dist,
+            self.moe_creation.rules,
+            self.moe_creation.params,
+            self.moe_creation.fitteds,
+            self.moe_creation.precompute_dist,
+            self.constraints.rules,
+        ) = data
 
         self.moe_non_creation._prep_callables()
         self.moe_creation._prep_callables()
@@ -551,17 +634,25 @@ class ObjModelLearner:
 
         # We did not have pomdp modules and thus were not saving context lengths before
         self.moe_non_creation.context_lengths = [-1] * len(
-            self.moe_non_creation.rules)
+            self.moe_non_creation.rules
+        )
         self.moe_creation.context_lengths = [-1] * len(self.moe_creation.rules)
 
     def _load_11_tuple_format(self, data: tuple) -> None:
         """Loads data in current 11-tuple format"""
-        (self.moe_non_creation.rules, self.moe_non_creation.params,
-         self.moe_non_creation.fitteds, self.moe_non_creation.context_lengths,
-         self.moe_non_creation.precompute_dist, self.moe_creation.rules,
-         self.moe_creation.params, self.moe_creation.fitteds,
-         self.moe_creation.context_lengths, self.moe_creation.precompute_dist,
-         self.constraints.rules) = data
+        (
+            self.moe_non_creation.rules,
+            self.moe_non_creation.params,
+            self.moe_non_creation.fitteds,
+            self.moe_non_creation.context_lengths,
+            self.moe_non_creation.precompute_dist,
+            self.moe_creation.rules,
+            self.moe_creation.params,
+            self.moe_creation.fitteds,
+            self.moe_creation.context_lengths,
+            self.moe_creation.precompute_dist,
+            self.constraints.rules,
+        ) = data
 
         self.moe_non_creation._prep_callables()
         self.moe_creation._prep_callables()
@@ -570,30 +661,38 @@ class ObjModelLearner:
     def save(self, final: bool = False) -> None:
         # Saves current model state to disk.
         log.info(
-            f'Saving checkpoint {self.processed_obs_count} final = {final}')
+            f'Saving checkpoint {self.processed_obs_count} final = {final}'
+        )
         os.makedirs(
             f'saved_checkpoints_{self.config.task}{self.config.obs_suffix}{"" if self.config.seed == 0 else f"_s{self.config.seed}"}/{self.obj_type}',
-            exist_ok=True)
+            exist_ok=True,
+        )
         data = [
-            self.moe_non_creation.rules, self.moe_non_creation.params,
+            self.moe_non_creation.rules,
+            self.moe_non_creation.params,
             self.moe_non_creation.fitteds,
             self.moe_non_creation.context_lengths,
-            self.moe_non_creation.precompute_dist, self.moe_creation.rules,
-            self.moe_creation.params, self.moe_creation.fitteds,
+            self.moe_non_creation.precompute_dist,
+            self.moe_creation.rules,
+            self.moe_creation.params,
+            self.moe_creation.fitteds,
             self.moe_creation.context_lengths,
-            self.moe_creation.precompute_dist, self.constraints.rules
+            self.moe_creation.precompute_dist,
+            self.constraints.rules,
         ]
         # with open(f'saved_checkpoints_{self.config.task}{self.config.obs_suffix}{"" if self.config.seed == 0 else f"_s{self.config.seed}"}/reasoner_{self.obj_type}_{self.processed_obs_count}.pickle', "wb") as f:
         #     pickle.dump((self.moe_non_creation, self.moe_creation), f)
         if final:
             with open(
-                    f'saved_checkpoints_{self.config.task}{self.config.obs_suffix}{"" if self.config.seed == 0 else f"_s{self.config.seed}"}/{self.obj_type}/final.pickle',
-                    "wb") as f:
+                f'saved_checkpoints_{self.config.task}{self.config.obs_suffix}{"" if self.config.seed == 0 else f"_s{self.config.seed}"}/{self.obj_type}/final.pickle',
+                'wb',
+            ) as f:
                 pickle.dump(data, f)
         else:
             with open(
-                    f'saved_checkpoints_{self.config.task}{self.config.obs_suffix}{"" if self.config.seed == 0 else f"_s{self.config.seed}"}/{self.obj_type}/{self.processed_obs_count}.pickle',
-                    "wb") as f:
+                f'saved_checkpoints_{self.config.task}{self.config.obs_suffix}{"" if self.config.seed == 0 else f"_s{self.config.seed}"}/{self.obj_type}/{self.processed_obs_count}.pickle',
+                'wb',
+            ) as f:
                 pickle.dump(data, f)
 
     def display_rules(self, mode='non_creation'):
@@ -602,11 +701,22 @@ class ObjModelLearner:
                 print(f'Constraint #{idx + 1} for obj_type {self.obj_type}')
                 print(rule)
         else:
-            target = self.moe_non_creation if mode == 'non_creation' else self.moe_creation
+            target = (
+                self.moe_non_creation
+                if mode == 'non_creation'
+                else self.moe_creation
+            )
             for idx, (rule, param, context_length) in enumerate(
-                    zip(target.rules, target.params, target.context_lengths)):
-                display_idx = idx + 1 if mode == 'non_creation' else idx + 1 + len(self.moe_non_creation.rules)
-                print(f'Expert #{display_idx} for obj_type {self.obj_type} with weight = {param:.2f}')
+                zip(target.rules, target.params, target.context_lengths)
+            ):
+                display_idx = (
+                    idx + 1
+                    if mode == 'non_creation'
+                    else idx + 1 + len(self.moe_non_creation.rules)
+                )
+                print(
+                    f'Expert #{display_idx} for obj_type {self.obj_type} with weight = {param:.2f}'
+                )
                 print(rule)
                 # log.info(
                 #     f'Rule {idx}, param = {param}, context length = {context_length}'
@@ -614,15 +724,20 @@ class ObjModelLearner:
                 # log.info(rule)
                 # if idx > 0 and idx % 50 == 0:
                 #     breakpoint()
-                    
+
     def count_lines(self, mode='non_creation'):
         total_lines = 0
         if mode == 'constraints':
             for idx, rule in enumerate(self.constraints.rules):
                 total_lines += len(rule.strip('\n').split('\n'))
         else:
-            target = self.moe_non_creation if mode == 'non_creation' else self.moe_creation
+            target = (
+                self.moe_non_creation
+                if mode == 'non_creation'
+                else self.moe_creation
+            )
             for idx, (rule, param, context_length) in enumerate(
-                    zip(target.rules, target.params, target.context_lengths)):
+                zip(target.rules, target.params, target.context_lengths)
+            ):
                 total_lines += len(rule.strip('\n').split('\n'))
         return total_lines

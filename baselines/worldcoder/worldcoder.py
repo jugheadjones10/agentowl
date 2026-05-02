@@ -1,13 +1,17 @@
 import logging
 
-from classes.helper import StateTransitionTriplet, are_two_obj_lists_equal, ObjList, ObjTypeInteractionSelector
-from learners.models import Model, Constraints
-from learners.world_model_learner import WorldModelLearner
 from classes.envs.object_tracker import ObjectTracker
+from classes.helper import (
+    ObjList,
+    ObjTypeInteractionSelector,
+    StateTransitionTriplet,
+)
+from learners.models import Constraints, Model
+from learners.world_model_learner import WorldModelLearner
 
+from .from_world_coder.evaluator import get_transit_func
 from .from_world_coder.llm_utils import LLM
 from .from_world_coder.synthesize_transit import synthesize_transit
-from .from_world_coder.evaluator import get_transit_func
 
 log = logging.getLogger('main')
 
@@ -279,7 +283,7 @@ def transition(state, action):
             # Check player-wall collision
             player_touching_wall = player.touches(wall, 2, 1.0) or player.touches(wall, 3, 1.0)
             # Adjust player velocity when touching the wall
-            # Set player velocity_y to 0 only when touching downward on a wall 
+            # Set player velocity_y to 0 only when touching downward on a wall
             # (simulating inability to fall through or move hence setting y-component of velocity to 0)
             player.velocity_y = 0
     def handle_zone_effects():
@@ -320,7 +324,7 @@ pong_world_model_s2 = """\
 def transition(state, event):
     new_state = state
     # Retrieve objects from the state
-    player = state.get_objs_by_obj_type("player")[0]  
+    player = state.get_objs_by_obj_type("player")[0]
     enemies = state.get_objs_by_obj_type("enemy")
     balls = state.get_objs_by_obj_type("ball")
     def adjust_enemy_velocity():
@@ -356,53 +360,53 @@ popp_constraints = [
     touch_ids, satisfied_ids = [], []
     player_objs = obj_list.get_objs_by_obj_type('player')  # get all Obj of type 'player'
     rope_objs = obj_list.get_objs_by_obj_type('rope')  # get all Obj of type 'rope'
-    
+
     for player_obj in player_objs:  # player_obj is of type Obj
         for rope_obj in rope_objs:  # rope_obj is of type Obj
             if player_obj.touches(rope_obj, touch_side, touch_percent):
                 touch_ids.append(player_obj.id)
                 if player_obj.center_x == rope_obj.center_x:
                     satisfied_ids.append(player_obj.id)
-    
+
     return touch_ids, satisfied_ids""",
     """def check_y_of_player_objects(obj_list: ObjList, _, touch_side=3, touch_percent=0.1) -> ObjList:
     touch_ids, satisfied_ids = [], []
     player_objs = obj_list.get_objs_by_obj_type('player')  # get all Obj of type 'player'
     conveyer_belt_objs = obj_list.get_objs_by_obj_type('conveyer_belt')  # get all Obj of type 'conveyer_belt'
-    
+
     for player_obj in player_objs:  # player_obj is of type Obj
         for conveyer_belt_obj in conveyer_belt_objs:  # conveyer_belt_obj is of type Obj
             if player_obj.touches(conveyer_belt_obj, touch_side, touch_percent):
                 touch_ids.append(conveyer_belt_obj.id)
                 if player_obj.bottom_side == conveyer_belt_obj.top_side:
                     satisfied_ids.append(conveyer_belt_obj.id)
-    
+
     return touch_ids, satisfied_ids""",
     """def check_y_of_player_objects(obj_list: ObjList, _, touch_side=3, touch_percent=0.5) -> ObjList:
     touch_ids, satisfied_ids = [], []
     player_objs = obj_list.get_objs_by_obj_type('player')  # get all Obj of type 'player'
     platform_objs = obj_list.get_objs_by_obj_type('platform')  # get all Obj of type 'platform'
-    
+
     for player_obj in player_objs:  # player_obj is of type Obj
         for platform_obj in platform_objs:  # platform_obj is of type Obj
             if player_obj.touches(platform_obj, touch_side, touch_percent):
                 touch_ids.append(platform_obj.id)
                 if player_obj.bottom_side == platform_obj.top_side:
                     satisfied_ids.append(platform_obj.id)
-    
+
     return touch_ids, satisfied_ids""",
     """def check_x_of_player_objects(obj_list: ObjList, _, touch_side=3, touch_percent=1.0) -> ObjList:
     touch_ids, satisfied_ids = [], []
     player_objs = obj_list.get_objs_by_obj_type('player')  # get all Obj of type 'player'
     ladder_objs = obj_list.get_objs_by_obj_type('ladder')  # get all Obj of type 'ladder'
-    
+
     for player_obj in player_objs:  # player_obj is of type Obj
         for ladder_obj in ladder_objs:  # ladder_obj is of type Obj
             if player_obj.touches(ladder_obj, touch_side, touch_percent):
                 touch_ids.append(ladder_obj.id)
                 if player_obj.center_x == ladder_obj.center_x:
                     satisfied_ids.append(ladder_obj.id)
-    
+
     return touch_ids, satisfied_ids""",
 ]
 
@@ -411,44 +415,52 @@ class WorldCoderModel(Model):
     def __init__(self, config, code):
         self.config = config
         self.code = code
-        self.compilation_error, self.func_name, self.transit_func, self.exec_globals = get_transit_func(code)
+        (
+            self.compilation_error,
+            self.func_name,
+            self.transit_func,
+            self.exec_globals,
+        ) = get_transit_func(code)
         self.memory = None
         self.cache = {}
         self.cache_enabled = False
-        
+
         if self.config.task.startswith('MontezumaRevenge'):
-            self.constraints = Constraints('player', ObjTypeInteractionSelector('player'))
+            self.constraints = Constraints(
+                'player', ObjTypeInteractionSelector('player')
+            )
             self.constraints.rules = popp_constraints
             self.constraints.prepare_callables()
         else:
-            self.constraints = Constraints('player', ObjTypeInteractionSelector('player'))
+            self.constraints = Constraints(
+                'player', ObjTypeInteractionSelector('player')
+            )
 
-    def sample_next_scene(self,
-                          obj_list_prev: ObjList,
-                          event: str,
-                          **kwargs) -> ObjList:
+    def sample_next_scene(
+        self, obj_list_prev: ObjList, event: str, **kwargs
+    ) -> ObjList:
         obj_list_next = obj_list_prev.deepcopy()
-        
+
         # step 1: pre-step
         obj_list_next.pre_step()
 
         # step 2: call the llm-generated code
         try:
             obj_list_next = self.transit_func(obj_list_next, event)
-        except Exception as e:
+        except Exception:
             pass
-        #TODO: include exec_globals later
+        # TODO: include exec_globals later
 
         # step 3: post-step (update prev_x and prev_y)
         obj_list_next.step()
-        
+
         # step 4: track the object
         object_tracker = ObjectTracker(init_obj_list=obj_list_prev)
         object_tracker.update(obj_list_next)
 
         # return the next scene
         return obj_list_next
-    
+
     def clear_cache(self) -> None:
         self.cache = {}
 
@@ -459,18 +471,18 @@ class WorldCoderModel(Model):
     def disable_cache(self) -> None:
         self.clear_cache()
         self.cache_enabled = False
-        
+
     def clear_precompute_dist(self) -> None:
         pass
-    
+
     def prepare_callables(self) -> None:
         self.constraints.prepare_callables()
-    
+
     def remove_callables(self) -> 'WorldCoderModel':
         new_model = WorldCoderModel(self.config, self.code)
         new_model.constraints.callables = []
         return new_model
-    
+
     def get_features(self, obj_list):
         return self.constraints.get_features(obj_list)
 
@@ -482,21 +494,32 @@ class WorldCoder(WorldModelLearner):
         self.saved_world_model_code = None
         self.world_model = None
         self.c = []
-        
+
         self.update_world_model_budget = 10.0
 
-    def synthesize_world_model(self, c: list[StateTransitionTriplet], **kwargs) -> WorldCoderModel:
+    def synthesize_world_model(
+        self, c: list[StateTransitionTriplet], **kwargs
+    ) -> WorldCoderModel:
         """
         :param c: List of StateTransitionTriplet
         :return: WorldCoderModel
         """
         self.c = c
-        
-        if self.config.task.startswith('MontezumaRevenge') and self.config.seed == 0:
+
+        if (
+            self.config.task.startswith('MontezumaRevenge')
+            and self.config.seed == 0
+        ):
             self.world_model_code = montezuma_world_model_s0
-        elif self.config.task.startswith('MontezumaRevenge') and self.config.seed == 1:
+        elif (
+            self.config.task.startswith('MontezumaRevenge')
+            and self.config.seed == 1
+        ):
             self.world_model_code = montezuma_world_model_s1
-        elif self.config.task.startswith('MontezumaRevenge') and self.config.seed == 2:
+        elif (
+            self.config.task.startswith('MontezumaRevenge')
+            and self.config.seed == 2
+        ):
             self.world_model_code = montezuma_world_model_s2
         elif self.config.task.startswith('Pong') and self.config.seed == 0:
             self.world_model_code = pong_world_model_s0
@@ -506,34 +529,43 @@ class WorldCoder(WorldModelLearner):
             self.world_model_code = pong_world_model_s2
         else:
             llm = LLM(seed=self.config.seed)
-            res = synthesize_transit(self.c, llm=llm, max_budget=10.0, np_rng=self.config.seed)
+            res = synthesize_transit(
+                self.c, llm=llm, max_budget=10.0, np_rng=self.config.seed
+            )
             self.world_model_code = res['code']
-            
-            log.info(f"Synthesized world model code: {self.world_model_code}")
-            
+
+            log.info(f'Synthesized world model code: {self.world_model_code}')
+
         self.world_model = WorldCoderModel(self.config, self.world_model_code)
         return self.world_model
 
     def update_world_model(self, c, fast=True, **kwargs):
         self.c = self.c + c
-        
-        if self.update_world_model_budget <= 0: 
+
+        if self.update_world_model_budget <= 0:
             return self.world_model
-        
+
         llm = LLM(seed=self.config.seed)
-        
+
         spending = 0.1 if fast else 0.5
-        res = synthesize_transit(self.c, init_transit_code=self.world_model_code, llm=llm, max_budget=min(spending, self.update_world_model_budget), with_total_cost=True, np_rng=self.config.seed)
+        res = synthesize_transit(
+            self.c,
+            init_transit_code=self.world_model_code,
+            llm=llm,
+            max_budget=min(spending, self.update_world_model_budget),
+            with_total_cost=True,
+            np_rng=self.config.seed,
+        )
         self.world_model_code = res['code']
-        
+
         self.update_world_model_budget -= res['final_total_cost']
-        
+
         self.world_model = WorldCoderModel(self.config, self.world_model_code)
         return self.world_model
-    
+
     def save_snapshot(self):
         self.saved_world_model_code = self.world_model_code
-        
+
     def load_snapshot(self):
         self.world_model_code = self.saved_world_model_code
         self.world_model = WorldCoderModel(self.config, self.world_model_code)

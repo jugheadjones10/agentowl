@@ -156,6 +156,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+openai-hf-interface/secrets.json
 env/
 venv/
 ENV/

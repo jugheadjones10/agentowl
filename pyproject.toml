@@ -43,6 +43,7 @@ dev = [
     "yapf==0.32.0",
     "docformatter==1.4",
     "isort==5.10.1",
+    "pytest>=9.0.3",
 ]
 
 [tool.uv.sources]

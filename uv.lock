@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = "==3.10.*"
 resolution-markers = [
     "platform_machine == 'arm64' and sys_platform == 'darwin'",
@@ -49,6 +49,7 @@ dev = [
     { name = "coverage" },
     { name = "docformatter" },
     { name = "isort" },
+    { name = "pytest" },
     { name = "yapf" },
 ]
 
@@ -91,6 +92,7 @@ dev = [
     { name = "coverage", specifier = "==7.5.3" },
     { name = "docformatter", specifier = "==1.4" },
     { name = "isort", specifier = "==5.10.1" },
+    { name = "pytest", specifier = ">=9.0.3" },
     { name = "yapf", specifier = "==0.32.0" },
 ]
 
@@ -575,6 +577,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/84/93bcd1300216ea50811cee96873b84a1bebf8d0489ffaf7f2a3756bab866/imageio-2.37.3.tar.gz", hash = "sha256:bbb37efbfc4c400fcd534b367b91fcd66d5da639aaa138034431a1c5e0a41451", size = 389673, upload-time = "2026-03-09T11:31:12.573Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/fa/391e437a34e55095173dca5f24070d89cbc233ff85bf1c29c93248c6588d/imageio-2.37.3-py3-none-any.whl", hash = "sha256:46f5bb8522cd421c0f5ae104d8268f569d856b29eb1a13b92829d1970f32c9f0", size = 317646, upload-time = "2026-03-09T11:31:10.771Z" },
+]
+
+[[package]]
+name = "iniconfig"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
 ]
 
 [[package]]
@@ -1101,6 +1112,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pluggy"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
 name = "pydantic"
 version = "2.13.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1162,6 +1182,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/11/b3/de6ed93ae483cf3bac8f950a955e83f7ffe59651fd804d100fff65d66d6c/pygame-2.6.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:da3ad64d685f84a34ebe5daacb39fff14f1251acb34c098d760d63fee768f50c", size = 13977684, upload-time = "2024-09-29T11:39:49.921Z" },
     { url = "https://files.pythonhosted.org/packages/d3/05/d86440aa879708c41844bafc6b3eb42c6d8cf54082482499b53139133e2a/pygame-2.6.1-cp310-cp310-win32.whl", hash = "sha256:9dd5c054d4bd875a8caf978b82672f02bec332f52a833a76899220c460bb4b58", size = 10251775, upload-time = "2024-09-29T11:40:34.952Z" },
     { url = "https://files.pythonhosted.org/packages/38/88/8de61324775cf2c844a51d8db14a8a6d2a9092312f27678f6eaa3a460376/pygame-2.6.1-cp310-cp310-win_amd64.whl", hash = "sha256:00827aba089355925902d533f9c41e79a799641f03746c50a374dc5c3362e43d", size = 10618801, upload-time = "2024-09-29T12:13:25.284Z" },
+]
+
+[[package]]
+name = "pygments"
+version = "2.20.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/b2/bc9c9196916376152d655522fdcebac55e66de6603a76a02bca1b6414f6c/pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f", size = 4955991, upload-time = "2026-03-29T13:29:33.898Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176", size = 1231151, upload-time = "2026-03-29T13:29:30.038Z" },
 ]
 
 [[package]]
@@ -3495,6 +3524,24 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest"
+version = "9.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "exceptiongroup" },
+    { name = "iniconfig" },
+    { name = "packaging" },
+    { name = "pluggy" },
+    { name = "pygments" },
+    { name = "tomli" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7d/0d/549bd94f1a0a402dc8cf64563a117c0f3765662e2e668477624baeec44d5/pytest-9.0.3.tar.gz", hash = "sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c", size = 1572165, upload-time = "2026-04-07T17:16:18.027Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d4/24/a372aaf5c9b7208e7112038812994107bc65a84cd00e0354a88c2c77a617/pytest-9.0.3-py3-none-any.whl", hash = "sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9", size = 375249, upload-time = "2026-04-07T17:16:16.13Z" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -3775,6 +3822,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/54/35/388f941251b2521c70dd4c5958e598ea6d2c88e28445d2fb8189eecc1dfc/tiktoken-0.12.0-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:6faa0534e0eefbcafaccb75927a4a380463a2eaa7e26000f0173b920e98b720a", size = 1195308, upload-time = "2025-10-06T20:21:39.577Z" },
     { url = "https://files.pythonhosted.org/packages/f8/00/c6681c7f833dd410576183715a530437a9873fa910265817081f65f9105f/tiktoken-0.12.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:82991e04fc860afb933efb63957affc7ad54f83e2216fe7d319007dab1ba5892", size = 1255697, upload-time = "2025-10-06T20:21:41.154Z" },
     { url = "https://files.pythonhosted.org/packages/5f/d2/82e795a6a9bafa034bf26a58e68fe9a89eeaaa610d51dbeb22106ba04f0a/tiktoken-0.12.0-cp310-cp310-win_amd64.whl", hash = "sha256:6fb2995b487c2e31acf0a9e17647e3b242235a20832642bb7a9d1a181c0c1bb1", size = 879375, upload-time = "2025-10-06T20:21:43.201Z" },
+]
+
+[[package]]
+name = "tomli"
+version = "2.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/22/de/48c59722572767841493b26183a0d1cc411d54fd759c5607c4590b6563a6/tomli-2.4.1.tar.gz", hash = "sha256:7c7e1a961a0b2f2472c1ac5b69affa0ae1132c39adcb67aba98568702b9cc23f", size = 17543, upload-time = "2026-03-25T20:22:03.828Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/61/cceae43728b7de99d9b847560c262873a1f6c98202171fd5ed62640b494b/tomli-2.4.1-py3-none-any.whl", hash = "sha256:0d85819802132122da43cb86656f8d1f8c6587d54ae7dcaf30e90533028b49fe", size = 14583, upload-time = "2026-03-25T20:22:03.012Z" },
 ]
 
 [[package]]

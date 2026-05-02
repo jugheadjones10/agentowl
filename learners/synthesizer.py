@@ -69,6 +69,15 @@ class Synthesizer(ABC):
                                                    c,
                                                    prompt,
                                                    player_int_selector=False):
+        """This method converts transitions into prompt-ready natural-language observations.
+        For each transition, it:
+        1. extracts natural-language effects with `_get_natural_language_effects`;
+        2. formats the relevant input objects and interactions into a prompt;
+        3. asks the LLM to describe generalized observations/reasons for those effects;
+        4. parses and deduplicates the LLM's numbered-list response.
+        The returned observations are later used by synthesizer prompts to generate
+        Python expert rules.
+        """
         observations = []
         to_be_prompteds = []
         for x in c:
@@ -106,6 +115,11 @@ class Synthesizer(ABC):
         return res
 
     def _get_natural_language_effects(self, x):
+        """This method takes a single transition, selects the relevant objects (such as player),
+        and for each instance of the target object in the output state of the transition,
+        it generates a natural-language description of changes to the object, such as whether it was
+        created, deleted, or had its velocity changed.
+        """
         if x not in self.cache_x:
             input_target_obj_list = self.objects_selector(x.input_state)
             output_target_obj_list = self.objects_selector(x.output_state)
